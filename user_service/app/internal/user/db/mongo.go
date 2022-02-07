@@ -3,19 +3,19 @@ package db
 import (
 	"context"
 
-	"github.com/juicyluv/sueta/user_service/app/internal/logger"
 	"github.com/juicyluv/sueta/user_service/app/internal/user"
+	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type db struct {
-	logger     logger.Logging
+	logger     logger.Logger
 	collection *mongo.Collection
 }
 
-func NewStorage(storage *mongo.Database, collection string, logger logger.Logging) user.Storage {
+func NewStorage(storage *mongo.Database, collection string) user.Storage {
 	return &db{
-		logger:     logger,
+		logger:     logger.GetLogger(),
 		collection: storage.Collection(collection),
 	}
 }
