@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"github.com/juicyluv/sueta/user_service/app/internal/logger"
+	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
 )
 
 type Service interface {
@@ -15,11 +15,11 @@ type Service interface {
 }
 
 type service struct {
-	logger  logger.Logging
+	logger  logger.Logger
 	storage Storage
 }
 
-func NewService(storage Storage, logger logger.Logging) Service {
+func NewService(storage Storage, logger logger.Logger) Service {
 	return &service{
 		logger:  logger,
 		storage: storage,
