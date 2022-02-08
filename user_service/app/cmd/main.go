@@ -2,9 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/juicyluv/sueta/user_service/app/config"
+	"github.com/juicyluv/sueta/user_service/app/internal/server"
 	"github.com/juicyluv/sueta/user_service/app/internal/user"
 	"github.com/juicyluv/sueta/user_service/app/internal/user/db"
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
@@ -27,12 +34,14 @@ func main() {
 	logger.Info("loaded config file")
 
 	router := httprouter.New()
-	_ = router
 	logger.Info("initialized httprouter")
 
 	logger.Info("connecting to database")
-	mongoClient, err := mongo.NewMongoClient(context.Background(),
-		cfg.DB.Database, cfg.DB.URL)
+
+	mongoCtx, mongoCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer mongoCancel()
+
+	mongoClient, err := mongo.NewMongoClient(mongoCtx, cfg.DB.Database, cfg.DB.URL)
 	if err != nil {
 		logger.Fatalf("cannot connect to mongodb: %v", err)
 	}
@@ -40,6 +49,40 @@ func main() {
 
 	userStorage := db.NewStorage(mongoClient, cfg.DB.Database)
 	userService := user.NewService(userStorage, logger)
-	_ = userService
 
+	userHandler := user.NewHandler(logger, userService)
+	userHandler.Register(router)
+	logger.Info("initialized user routes")
+
+	logger.Info("starting the server")
+	srv := server.NewServer(cfg, router, &logger)
+
+	quit := make(chan os.Signal, 1)
+	signals := []os.Signal{syscall.SIGABRT, syscall.SIGQUIT, syscall.SIGHUP, os.Interrupt, syscall.SIGTERM}
+	signal.Notify(quit, signals...)
+
+	go func() {
+		if err := srv.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Fatalf("cannot run the server: %v", err)
+		}
+	}()
+	logger.Infof("server has been started on port %s", cfg.Http.Port)
+
+	<-quit
+	logger.Warn("shutting down the server")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer func() {
+		if err := mongoClient.Client().Disconnect(ctx); err != nil {
+			logger.Errorf("failed closing mongo: %v", err)
+		}
+		logger.Info("closed mongo database connection")
+		cancel()
+	}()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Errorf("server shutdown failed: %v", err)
+	}
+
+	logger.Info("server has been shutted down")
 }
