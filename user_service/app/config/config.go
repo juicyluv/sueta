@@ -8,6 +8,7 @@ import (
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
 )
 
+// Config describes an application configuration structure.
 type Config struct {
 	Http struct {
 		Port           string `yaml:"port" env-default:"8080"`
