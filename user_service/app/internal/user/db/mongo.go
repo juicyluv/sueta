@@ -32,19 +32,37 @@ func NewStorage(storage *mongo.Database, collection string) user.Storage {
 }
 
 // Create inserts a new row in the database.
-// Returns an error on failure and token string on success.
-func (d *db) Create(ctx context.Context, user *user.CreateUserDTO) (string, error) {
-	return "", nil
+// It uses InsertOne behind the scenes.
+// Returns an error on failure or inserted user uuid on success.
+func (d *db) Create(ctx context.Context, user *user.User) (string, error) {
+	result, err := d.collection.InsertOne(ctx, user)
+	if err != nil {
+		e := fmt.Errorf("cannot insert user in database: %w", err)
+		d.logger.Warn(e)
+		return "", e
+	}
+
+	id, ok := result.InsertedID.(primitive.ObjectID)
+	if !ok {
+		e := fmt.Errorf("cannot convert user uuid to object id: %w", err)
+		d.logger.Warn(e)
+		return "", e
+	}
+
+	return id.Hex(), nil
 }
 
 // FindByEmail finds the user by given email.
-// Returns an error on failure or No Rows Error if there's no user with given email.
+// Returns user instance on success, but on failure
+// returns an error or No Rows Error
+// if there's no user with given email.
 func (d *db) FindByEmail(ctx context.Context, email string) (*user.User, error) {
 	return nil, nil
 }
 
 // FindById finds the user by given uuid.
-// Returns an error on failure or No Rows Error if there's no user with given uuid.
+// Returns user instance on success, but on failure
+// returns an error or No Rows Error if there's no user with given uuid.
 func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
 	var user *user.User
 
@@ -60,10 +78,10 @@ func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
 
 	result := d.collection.FindOne(ctx, filter)
 	if result.Err() != nil {
-		d.logger.Error(result.Err())
 		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
 			return nil, apperror.ErrNotFound
 		}
+		d.logger.Error(result.Err())
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 
@@ -77,7 +95,7 @@ func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
 // UpdatePartially updates the user with given uuid.
 // Returns an error if something went wrong or No Rows error if
 // there's no user with given uuid.
-func (d *db) UpdatePartially(ctx context.Context, user *user.UpdateUserDTO) error {
+func (d *db) UpdatePartially(ctx context.Context, user *user.User) error {
 	return nil
 }
 
