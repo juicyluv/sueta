@@ -1,6 +1,7 @@
 package apperror
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -12,6 +13,9 @@ var (
 		"a given resource is not found",
 		"please, double check your request structure",
 	)
+
+	// ErrNoRows is used when no rows returned from storage.
+	ErrNoRows = errors.New("no rows")
 )
 
 // AppError describes a structure of an error response in JSON format.
@@ -30,6 +34,11 @@ func NewAppError(code int, message, developerMessage string) *AppError {
 		DeveloperMessage: developerMessage,
 		HttpCode:         code,
 	}
+}
+
+// Error returns a string representation of an error.
+func (ae *AppError) Error() string {
+	return ae.Err.Error()
 }
 
 // BadRequestError returns a new AppError instance
