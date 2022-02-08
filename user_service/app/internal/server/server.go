@@ -1,20 +1,37 @@
 package server
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/juicyluv/sueta/user_service/app/config"
-	"github.com/juicyluv/sueta/user_service/app/internal/handler"
+	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
+	"github.com/julienschmidt/httprouter"
 )
 
 type Server struct {
 	server *http.Server
+	logger *logger.Logger
 }
 
-func NewServer(cfg *config.Config) *Server {
+func NewServer(cfg *config.Config, handler *httprouter.Router, logger *logger.Logger) *Server {
 	return &Server{
 		server: &http.Server{
-			Handler: handler.NewHandler().Router(),
+			Handler:        handler,
+			WriteTimeout:   time.Duration(cfg.Http.WriteTimeout) * time.Second,
+			ReadTimeout:    time.Duration(cfg.Http.ReadTimeout) * time.Second,
+			MaxHeaderBytes: cfg.Http.MaxHeaderBytes << 20,
+			Addr:           ":" + cfg.Http.Port,
 		},
+		logger: logger,
 	}
+}
+
+func (s *Server) Run() error {
+	return s.server.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
