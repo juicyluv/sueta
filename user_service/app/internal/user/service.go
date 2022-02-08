@@ -2,7 +2,10 @@ package user
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/juicyluv/sueta/user_service/app/internal/user/apperror"
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
 )
 
@@ -36,8 +39,21 @@ func (s *service) GetByEmailAndPassword(ctx context.Context, email, password str
 	return nil, nil
 }
 
+// GetById will find a user with specified uuid in storage.
+// Returns an error on failure of there's no user with this uuid.
 func (s *service) GetById(ctx context.Context, uuid string) (*User, error) {
-	return nil, nil
+	user, err := s.storage.FindById(ctx, uuid)
+
+	if err != nil {
+		if errors.Is(err, apperror.ErrNoRows) {
+			return user, err
+		}
+		err = fmt.Errorf("failed to find user by uuid: %v", err)
+		s.logger.Warn(err)
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *service) UpdatePartially(ctx context.Context, user *UpdateUserDTO) error {
