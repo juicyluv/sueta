@@ -2,6 +2,7 @@ package user
 
 import "context"
 
+// Storage descibes a user storage functionality.
 type Storage interface {
 	Create(ctx context.Context, user *CreateUserDTO) (string, error)
 	FindByEmail(ctx context.Context, email string) (*User, error)

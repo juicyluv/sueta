@@ -6,6 +6,7 @@ import (
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
 )
 
+// Service describes user service functionality.
 type Service interface {
 	Create(ctx context.Context, user *CreateUserDTO) (string, error)
 	GetByEmailAndPassword(ctx context.Context, email, password string) (*User, error)
@@ -19,6 +20,7 @@ type service struct {
 	storage Storage
 }
 
+// NewService returns a new instance that implements Service interface.
 func NewService(storage Storage, logger logger.Logger) Service {
 	return &service{
 		logger:  logger,
