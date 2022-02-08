@@ -2,7 +2,11 @@ package user
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/juicyluv/sueta/user_service/app/internal/handler"
 	"github.com/juicyluv/sueta/user_service/app/internal/user/apperror"
@@ -32,6 +36,7 @@ func NewHandler(logger logger.Logger, userService Service) handler.Handling {
 // Register registers new routes for router.
 func (h *Handler) Register(router *httprouter.Router) {
 	router.HandlerFunc(http.MethodGet, userURL, h.GetUser)
+	router.HandlerFunc(http.MethodPost, usersURL, h.CreateUser)
 }
 
 // GetUser parses uuid from URL parameters, then, using user service,
@@ -52,6 +57,35 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	h.JSON(w, http.StatusOK, user)
 }
 
+// GetUser parses request body, then, using user service,
+// returns a user instance from database with given uuid or an error
+// if input is invalid, given email already taken or something went wrong.
+func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Info("CREATE USER")
+
+	var input CreateUserDTO
+	if err := h.readJSON(w, r, &input); err != nil {
+		h.BadRequest(w, apperror.BadRequestError(err.Error(), "invalid request body"))
+		return
+	}
+
+	if err := input.Validate(); err != nil {
+		h.BadRequest(w, apperror.BadRequestError(err.Error(), "invalid request body"))
+		return
+	}
+
+	userId, err := h.UserService.Create(r.Context(), &input)
+	if err != nil {
+		h.InternalError(w, apperror.InternalError(
+			fmt.Sprintf("cannot create user: %v", err),
+			"something went wrong on server side",
+		))
+		return
+	}
+
+	h.JSON(w, http.StatusCreated, map[string]string{"id": userId})
+}
+
 // JSON encodes to JSON format given data and sends a response
 // to the client with a given http code and encoded data.
 func (h *Handler) JSON(w http.ResponseWriter, code int, data interface{}) {
@@ -65,8 +99,81 @@ func (h *Handler) JSON(w http.ResponseWriter, code int, data interface{}) {
 	w.Write(obj)
 }
 
+// readJSON decodes request body to the given destination(usually model struct).
+// Returns an error on failure.
+func (h *Handler) readJSON(w http.ResponseWriter, r *http.Request, dest interface{}) error {
+	// Create a new decoder and check for unknown fields
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	err := dec.Decode(dest)
+	if err != nil {
+		// If an error occurred, send an error mapped to JSON decoding error
+		var syntaxError *json.SyntaxError
+		var unmarshalTypeError *json.UnmarshalTypeError
+		var invalidUnmarshalError *json.InvalidUnmarshalError
+
+		switch {
+		// Syntax error
+		case errors.As(err, &syntaxError):
+			return fmt.Errorf(
+				"request body contains badly-formatted JSON (at character %d)",
+				syntaxError.Offset,
+			)
+		// Type error
+		case errors.As(err, &unmarshalTypeError):
+			// If there's an info for struct field, show what field contains an error
+			if unmarshalTypeError.Field != "" {
+				return fmt.Errorf(
+					"request body contains incorrect JSON type for field %q",
+					unmarshalTypeError.Field,
+				)
+			}
+
+			return fmt.Errorf(
+				"request body contains incorrect JSON type (at character %d)",
+				unmarshalTypeError.Offset,
+			)
+		// Unmarshall error
+		case errors.As(err, &invalidUnmarshalError):
+			// We are panicing here because this is unexpected error
+			panic(err)
+		// Empty JSON error
+		case errors.Is(err, io.EOF):
+			return errors.New("request body must not be empty")
+		// Unknown field error
+		case strings.HasPrefix(err.Error(), "json: unknown field "):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
+			return fmt.Errorf("request body contains unknown key %s", fieldName)
+
+		// Return error as-is
+		default:
+			return err
+		}
+	}
+
+	// Decode one more time to check wheter here is another JSON object
+	if err = dec.Decode(&struct{}{}); err != io.EOF {
+		return errors.New("request body must only contain single JSON value")
+	}
+
+	return nil
+}
+
 // Error is a wrapper around JSON function. It responses with specified error and
 // http code.
 func (h *Handler) Error(w http.ResponseWriter, code int, err *apperror.AppError) {
 	h.JSON(w, code, err)
+}
+
+// BadRequest is a wrapper around Error function.
+// Responses with 404 Bad Request status code and specified error message.
+func (h *Handler) BadRequest(w http.ResponseWriter, err *apperror.AppError) {
+	h.Error(w, http.StatusBadRequest, err)
+}
+
+// InternalError is a wrapper around Error function.
+// Responses with 500 Internal Server Error status code and specified error message.
+func (h *Handler) InternalError(w http.ResponseWriter, err *apperror.AppError) {
+	h.Error(w, http.StatusInternalServerError, err)
 }
