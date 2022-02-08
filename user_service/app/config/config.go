@@ -16,7 +16,6 @@ type Config struct {
 		MaxHeaderBytes int    `yaml:"maxHeaderBytes" env-default:"1"`
 		ReadTimeout    int    `yaml:"readTimeout" env-default:"20"`
 		WriteTimeout   int    `yaml:"writeTimeout" env-default:"20"`
-		RequestTimeout int    `yaml:"requestTimeout" env-default:"15"`
 	} `yaml:"http" env-required:"true"`
 	// DB represents configuration for database.
 	DB struct {
