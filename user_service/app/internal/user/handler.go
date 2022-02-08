@@ -12,7 +12,7 @@ import (
 
 const (
 	usersURL = "/api/users"
-	userURL  = "/api/user/:uuid"
+	userURL  = "/api/users/:uuid"
 )
 
 // Handler handles requests specified to user service.
@@ -31,7 +31,7 @@ func NewHandler(logger logger.Logger, userService Service) handler.Handling {
 
 // Register registers new routes for router.
 func (h *Handler) Register(router *httprouter.Router) {
-	router.HandlerFunc(http.MethodGet, usersURL, h.GetUser)
+	router.HandlerFunc(http.MethodGet, userURL, h.GetUser)
 }
 
 // GetUser parses uuid from URL parameters, then, using user service,
