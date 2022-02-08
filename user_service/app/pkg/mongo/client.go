@@ -9,7 +9,7 @@ import (
 )
 
 // NewMongoClient tries to connect to database with provided options.
-// If everything is OK, returns a new mongo client instance.
+// If everything is OK, returns a new mongo database instance.
 // Returns an error if something went wrong.
 func NewMongoClient(ctx context.Context, database, mongoURL string) (*mongo.Database, error) {
 	clientOptions := options.Client().ApplyURI(mongoURL)
