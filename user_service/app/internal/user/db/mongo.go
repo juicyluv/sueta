@@ -2,11 +2,20 @@ package db
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"time"
 
 	"github.com/juicyluv/sueta/user_service/app/internal/user"
+	"github.com/juicyluv/sueta/user_service/app/internal/user/apperror"
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// Check whether db implements user storage interface.
+var _ user.Storage = &db{}
 
 // db implementes user storage interface.
 type db struct {
@@ -37,7 +46,32 @@ func (d *db) FindByEmail(ctx context.Context, email string) (*user.User, error) 
 // FindById finds the user by given uuid.
 // Returns an error on failure or No Rows Error if there's no user with given uuid.
 func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
-	return nil, nil
+	var user *user.User
+
+	objectID, err := primitive.ObjectIDFromHex(uuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert hex to objectid: %w", err)
+	}
+
+	filter := bson.M{"_id": objectID}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	result := d.collection.FindOne(ctx, filter)
+	if result.Err() != nil {
+		d.logger.Error(result.Err())
+		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
+			return nil, apperror.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	if err = result.Decode(&user); err != nil {
+		return nil, fmt.Errorf("failed to decode document: %w", err)
+	}
+
+	return user, nil
 }
 
 // UpdatePartially updates the user with given uuid.
