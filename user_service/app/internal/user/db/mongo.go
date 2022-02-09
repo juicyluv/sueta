@@ -57,7 +57,23 @@ func (d *db) Create(ctx context.Context, user *user.User) (string, error) {
 // returns an error or No Rows Error
 // if there's no user with given email.
 func (d *db) FindByEmail(ctx context.Context, email string) (*user.User, error) {
-	return nil, nil
+	filter := bson.M{"email": email}
+
+	result := d.collection.FindOne(ctx, filter)
+	if err := result.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, apperror.ErrNoRows
+		}
+		d.logger.Warn("failed to execute query: %w", err)
+		return nil, err
+	}
+
+	var user user.User
+	if err := result.Decode(&user); err != nil {
+		return nil, fmt.Errorf("failed to decode document: %w", err)
+	}
+
+	return &user, nil
 }
 
 // FindById finds the user by given uuid.
