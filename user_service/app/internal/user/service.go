@@ -98,5 +98,12 @@ func (s *service) UpdatePartially(ctx context.Context, user *UpdateUserDTO) erro
 }
 
 func (s *service) Delete(ctx context.Context, uuid string) error {
+	err := s.storage.Delete(ctx, uuid)
+	if err != nil {
+		if !errors.Is(err, apperror.ErrNoRows) {
+			s.logger.Warn("failed to delete the user: %v", err)
+		}
+	}
+
 	return nil
 }
