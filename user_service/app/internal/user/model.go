@@ -14,7 +14,6 @@ type User struct {
 	Password     string `json:"-" bson:"password,omitempty"`
 	Verified     bool   `json:"verified" bson:"verified,omitempty"`
 	RegisteredAt string `json:"registeredAt" bson:"registeredAt,omitempty"`
-	Role         Role   `json:"role"`
 }
 
 // HashPassword will encrypt current user password.
@@ -60,7 +59,6 @@ type UpdateUserDTO struct {
 	Username    *string `json:"username"`
 	OldPassword *string `json:"oldPassword"`
 	NewPassword *string `json:"newPassword"`
-	RoleUUID    *string `json:"roleId"`
 }
 
 // Validate will validates current struct fields.
@@ -70,14 +68,7 @@ func (u *UpdateUserDTO) Validate() error {
 		u,
 		validation.Field(&u.Email, is.Email),
 		validation.Field(&u.Username, is.Alphanumeric),
-		validation.Field(&u.OldPassword, is.Alphanumeric),
-		validation.Field(&u.NewPassword, is.Alphanumeric),
-		validation.Field(&u.RoleUUID, is.UUIDv4),
+		validation.Field(&u.OldPassword, is.Alphanumeric, validation.Required),
+		validation.Field(&u.NewPassword, is.Alphanumeric, validation.Required),
 	)
-}
-
-// Role represents user role model.
-type Role struct {
-	UUID string `json:"uuid" bson:"_id,omitempty"`
-	Role string `json:"role" bson:"role,omitempty"`
 }
