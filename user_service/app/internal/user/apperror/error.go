@@ -10,12 +10,15 @@ var (
 	// ErrNotFound is used when server needs to response with 404 Not Found status code.
 	ErrNotFound = NewAppError(
 		http.StatusNotFound,
-		"a given resource is not found",
+		"requested resource is not found",
 		"please, double check your request structure",
 	)
 
 	// ErrNoRows is used when no rows returned from storage.
 	ErrNoRows = errors.New("no rows")
+
+	// ErrEmailTaken is used when the user is being created and given email is already taken.
+	ErrEmailTaken = errors.New("email already taken")
 )
 
 // AppError describes a structure of an error response in JSON format.
