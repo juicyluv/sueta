@@ -88,6 +88,11 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	h.JSON(w, http.StatusCreated, map[string]string{"id": userId})
 }
 
+// GetUserByEmailAndPassword parses email and password from URL query,
+// then validates it and finds a user with this parameters.
+// If validation failed, returns a 400 Bad request response.
+// If user not found, returns a 404 Not Found response.
+// If user found, returns a user information.
 func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Request) {
 	h.Logger.Info("GET USER BY EMAIL AND PASSWORD")
 
