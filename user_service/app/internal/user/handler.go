@@ -117,6 +117,26 @@ func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Reque
 	h.JSON(w, http.StatusOK, user)
 }
 
+func (h *Handler) UpdateUserPartially(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Info("UPDATE USER PARTIALLY")
+
+	// params := httprouter.ParamsFromContext(r.Context())
+	// uuid := params.ByName("uuid")
+
+	var input UpdateUserDTO
+	if err := h.readJSON(w, r, &input); err != nil {
+		h.BadRequest(w, err.Error(), "please, fix your request body")
+		return
+	}
+
+	if err := input.Validate(); err != nil {
+		h.BadRequest(w, err.Error(), "you have provided invalid values")
+		return
+	}
+
+	// TODO: update the user
+}
+
 // DeleteUser parses user uuid from URL parameters, then
 // tries to delete the user with this uuid. If user with provided
 // uuid doesn't exists, 404 Not Found response will be sent to the client.
