@@ -29,6 +29,12 @@ func (u *User) HashPassword() error {
 	return nil
 }
 
+// ComparePassword compares hashed user password with given raw password.
+// If it doesn't match, returns false.
+func (u *User) ComparePassword(password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)) == nil
+}
+
 // CreateUserDTO is used to create user.
 type CreateUserDTO struct {
 	Email    string `json:"email"`
