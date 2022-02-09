@@ -34,10 +34,7 @@ func NewService(storage Storage, logger logger.Logger) Service {
 
 func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, error) {
 	_, err := s.storage.FindByEmail(ctx, input.Email)
-	if err != nil {
-		if errors.Is(err, apperror.ErrNoRows) {
-			return "", errors.New("email already taken")
-		}
+	if err != nil && !errors.Is(err, apperror.ErrNoRows) {
 		return "", err
 	}
 
@@ -63,7 +60,20 @@ func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, err
 }
 
 func (s *service) GetByEmailAndPassword(ctx context.Context, email, password string) (*User, error) {
-	return nil, nil
+	user, err := s.storage.FindByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, apperror.ErrNoRows) {
+			return nil, err
+		}
+		s.logger.Warn("error occurred on finding user by email: %w", err)
+		return nil, err
+	}
+
+	if !user.ComparePassword(password) {
+		return nil, errors.New("password doesn't match")
+	}
+
+	return user, nil
 }
 
 // GetById will find a user with specified uuid in storage.
