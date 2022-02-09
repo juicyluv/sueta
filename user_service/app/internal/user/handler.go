@@ -117,6 +117,31 @@ func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Reque
 	h.JSON(w, http.StatusOK, user)
 }
 
+// DeleteUser parses user uuid from URL parameters, then
+// tries to delete the user with this uuid. If user with provided
+// uuid doesn't exists, 404 Not Found response will be sent to the client.
+// If user has been deleted, 200 OK status will be sent.
+// If something went wrong on the server side, 500 Internal Server Error
+// response will be sent.
+func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Info("DELETE USER")
+
+	params := httprouter.ParamsFromContext(r.Context())
+	uuid := params.ByName("uuid")
+
+	err := h.UserService.Delete(r.Context(), uuid)
+	if err != nil {
+		if errors.Is(err, apperror.ErrNoRows) {
+			h.NotFound(w)
+			return
+		}
+		h.InternalError(w, err.Error(), "something went wrong on the server side")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // JSON encodes to JSON format given data and sends a response
 // to the client with a given http code and encoded data.
 func (h *Handler) JSON(w http.ResponseWriter, code int, data interface{}) {
