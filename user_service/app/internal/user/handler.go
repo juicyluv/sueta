@@ -36,6 +36,7 @@ func NewHandler(logger logger.Logger, userService Service) handler.Handling {
 // Register registers new routes for router.
 func (h *Handler) Register(router *httprouter.Router) {
 	router.HandlerFunc(http.MethodGet, userURL, h.GetUser)
+	router.HandlerFunc(http.MethodGet, usersURL, h.GetUserByEmailAndPassword)
 	router.HandlerFunc(http.MethodPost, usersURL, h.CreateUser)
 }
 
@@ -50,7 +51,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetById(r.Context(), uuid)
 	if err != nil {
-		h.Error(w, http.StatusInternalServerError, nil)
+		h.InternalError(w, err.Error(), "")
 		return
 	}
 
@@ -65,25 +66,50 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	var input CreateUserDTO
 	if err := h.readJSON(w, r, &input); err != nil {
-		h.BadRequest(w, apperror.BadRequestError(err.Error(), "invalid request body"))
+		h.BadRequest(w, err.Error(), "invalid request body")
 		return
 	}
 
 	if err := input.Validate(); err != nil {
-		h.BadRequest(w, apperror.BadRequestError(err.Error(), "invalid request body"))
+		h.BadRequest(w, err.Error(), "input validation failed. please, provide valid values")
 		return
 	}
 
 	userId, err := h.UserService.Create(r.Context(), &input)
 	if err != nil {
-		h.InternalError(w, apperror.InternalError(
-			fmt.Sprintf("cannot create user: %v", err),
-			"something went wrong on server side",
-		))
+		if err := apperror.ErrEmailTaken; err != nil {
+			h.BadRequest(w, err.Error(), "")
+			return
+		}
+		h.InternalError(w, fmt.Sprintf("cannot create user: %v", err), "")
 		return
 	}
 
 	h.JSON(w, http.StatusCreated, map[string]string{"id": userId})
+}
+
+func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Request) {
+	h.Logger.Info("GET USER BY EMAIL AND PASSWORD")
+
+	email := r.URL.Query().Get("email")
+	password := r.URL.Query().Get("password")
+
+	if email == "" || password == "" {
+		h.BadRequest(w, "empty email or password", "email and password must be provided")
+		return
+	}
+
+	user, err := h.UserService.GetByEmailAndPassword(r.Context(), email, password)
+	if err != nil {
+		if errors.Is(err, apperror.ErrNoRows) {
+			h.NotFound(w)
+			return
+		}
+		h.BadRequest(w, err.Error(), "")
+		return
+	}
+
+	h.JSON(w, http.StatusOK, user)
 }
 
 // JSON encodes to JSON format given data and sends a response
@@ -160,20 +186,27 @@ func (h *Handler) readJSON(w http.ResponseWriter, r *http.Request, dest interfac
 	return nil
 }
 
-// Error is a wrapper around JSON function. It responses with specified error and
-// http code.
-func (h *Handler) Error(w http.ResponseWriter, code int, err *apperror.AppError) {
-	h.JSON(w, code, err)
+// Error is a wrapper around JSON method.
+// It responses with specified error and http code.
+func (h *Handler) Error(w http.ResponseWriter, code int, message, developerMessage string) {
+	appError := apperror.NewAppError(code, message, developerMessage)
+	h.JSON(w, code, appError)
 }
 
-// BadRequest is a wrapper around Error function.
-// Responses with 404 Bad Request status code and specified error message.
-func (h *Handler) BadRequest(w http.ResponseWriter, err *apperror.AppError) {
-	h.Error(w, http.StatusBadRequest, err)
+// BadRequest is a wrapper around Error method.
+// Responses with 400 Bad Request status code and specified error message.
+func (h *Handler) BadRequest(w http.ResponseWriter, message, developerMessage string) {
+	h.Error(w, http.StatusBadRequest, message, developerMessage)
 }
 
-// InternalError is a wrapper around Error function.
+// Not Found is a wrapper around JSON method.
+// Responses with 404 Not Found status code and specified error message.
+func (h *Handler) NotFound(w http.ResponseWriter) {
+	h.JSON(w, http.StatusNotFound, apperror.ErrNotFound)
+}
+
+// InternalError is a wrapper around Error method.
 // Responses with 500 Internal Server Error status code and specified error message.
-func (h *Handler) InternalError(w http.ResponseWriter, err *apperror.AppError) {
-	h.Error(w, http.StatusInternalServerError, err)
+func (h *Handler) InternalError(w http.ResponseWriter, message, developerMessage string) {
+	h.Error(w, http.StatusInternalServerError, message, developerMessage)
 }
