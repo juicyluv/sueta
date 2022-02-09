@@ -115,8 +115,23 @@ func (d *db) UpdatePartially(ctx context.Context, user *user.User) error {
 	return nil
 }
 
-// Delete deletes the user row with given uuid.
-// Returns an error on failure. Returns nil if there's no such user with given uuid.
+// Delete deletes the user row with given uuid. Returns an error on failure.
+// Returns ErrNoRows if there's no such user with given uuid.
 func (d *db) Delete(ctx context.Context, uuid string) error {
+	objectID, err := primitive.ObjectIDFromHex(uuid)
+	if err != nil {
+		return fmt.Errorf("failed to convert hex to objectid: %w", err)
+	}
+
+	filter := bson.M{"_id": objectID}
+
+	result := d.collection.FindOneAndDelete(ctx, filter)
+	if err := result.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return apperror.ErrNoRows
+		}
+		return fmt.Errorf("cannot delete user: %v", err)
+	}
+
 	return nil
 }
