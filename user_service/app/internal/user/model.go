@@ -36,9 +36,10 @@ func (u *User) ComparePassword(password string) bool {
 
 // CreateUserDTO is used to create user.
 type CreateUserDTO struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Email          string `json:"email"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	RepeatPassword string `json:"repeatPassword"`
 }
 
 // Validate will validates current struct fields.
@@ -46,15 +47,29 @@ type CreateUserDTO struct {
 func (u *CreateUserDTO) Validate() error {
 	return validation.ValidateStruct(
 		u,
-		validation.Field(&u.Email, is.Email, validation.Required),
-		validation.Field(&u.Username, is.Alphanumeric, validation.Required),
-		validation.Field(&u.Password, is.Alphanumeric, validation.Required),
+		validation.Field(
+			&u.Email,
+			is.Email,
+			validation.Required,
+		),
+		validation.Field(
+			&u.Username,
+			is.Alphanumeric,
+			validation.Length(3, 20),
+			validation.Required,
+		),
+		validation.Field(
+			&u.Password,
+			is.Alphanumeric,
+			validation.Length(6, 24),
+			validation.Required,
+		),
 	)
 }
 
 // UpdateUserDTO is used to update user record.
 type UpdateUserDTO struct {
-	UUID        string
+	UUID        string  `json:"-"`
 	Email       *string `json:"email"`
 	Username    *string `json:"username"`
 	OldPassword *string `json:"oldPassword"`
@@ -69,6 +84,9 @@ func (u *UpdateUserDTO) Validate() error {
 		validation.Field(&u.Email, is.Email),
 		validation.Field(&u.Username, is.Alphanumeric),
 		validation.Field(&u.OldPassword, is.Alphanumeric, validation.Required),
-		validation.Field(&u.NewPassword, is.Alphanumeric, validation.Required),
+		validation.Field(
+			&u.NewPassword,
+			validation.Length(6, 24),
+			is.Alphanumeric),
 	)
 }
