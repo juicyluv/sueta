@@ -21,15 +21,15 @@ const (
 
 // Handler handles requests specified to user service.
 type Handler struct {
-	Logger      logger.Logger
-	UserService Service
+	logger      logger.Logger
+	userService Service
 }
 
 // NewHandler returns a new user Handler instance.
 func NewHandler(logger logger.Logger, userService Service) handler.Handling {
 	return &Handler{
-		Logger:      logger,
-		UserService: userService,
+		logger:      logger,
+		userService: userService,
 	}
 }
 
@@ -38,19 +38,25 @@ func (h *Handler) Register(router *httprouter.Router) {
 	router.HandlerFunc(http.MethodGet, userURL, h.GetUser)
 	router.HandlerFunc(http.MethodGet, usersURL, h.GetUserByEmailAndPassword)
 	router.HandlerFunc(http.MethodPost, usersURL, h.CreateUser)
+	router.HandlerFunc(http.MethodPatch, userURL, h.UpdateUserPartially)
+	router.HandlerFunc(http.MethodDelete, userURL, h.DeleteUser)
 }
 
 // GetUser parses uuid from URL parameters, then, using user service,
 // returns a user instance from database with given uuid or an error
 // if there's no user with such uuid or something went wrong.
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
-	h.Logger.Info("GET USER")
+	h.logger.Info("GET USER")
 
 	params := httprouter.ParamsFromContext(r.Context())
 	uuid := params.ByName("uuid")
 
-	user, err := h.UserService.GetById(r.Context(), uuid)
+	user, err := h.userService.GetById(r.Context(), uuid)
 	if err != nil {
+		if errors.Is(err, apperror.ErrNoRows) {
+			h.NotFound(w)
+			return
+		}
 		h.InternalError(w, err.Error(), "")
 		return
 	}
@@ -62,7 +68,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 // returns a user instance from database with given uuid or an error
 // if input is invalid, given email already taken or something went wrong.
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	h.Logger.Info("CREATE USER")
+	h.logger.Info("CREATE USER")
 
 	var input CreateUserDTO
 	if err := h.readJSON(w, r, &input); err != nil {
@@ -75,7 +81,12 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, err := h.UserService.Create(r.Context(), &input)
+	if input.Password != input.RepeatPassword {
+		h.BadRequest(w, "password don't match", "provided passwords must to match")
+		return
+	}
+
+	userId, err := h.userService.Create(r.Context(), &input)
 	if err != nil {
 		if err := apperror.ErrEmailTaken; err != nil {
 			h.BadRequest(w, err.Error(), "")
@@ -94,7 +105,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 // If user not found, returns a 404 Not Found response.
 // If user found, returns a user information.
 func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Request) {
-	h.Logger.Info("GET USER BY EMAIL AND PASSWORD")
+	h.logger.Info("GET USER BY EMAIL AND PASSWORD")
 
 	email := r.URL.Query().Get("email")
 	password := r.URL.Query().Get("password")
@@ -104,7 +115,7 @@ func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	user, err := h.UserService.GetByEmailAndPassword(r.Context(), email, password)
+	user, err := h.userService.GetByEmailAndPassword(r.Context(), email, password)
 	if err != nil {
 		if errors.Is(err, apperror.ErrNoRows) {
 			h.NotFound(w)
@@ -117,11 +128,16 @@ func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Reque
 	h.JSON(w, http.StatusOK, user)
 }
 
+// UpdateUserPartially parses uuid from URL query, then validated
+// user input and updates the user with provided uuid.
+// If user with provided uuid is not found, 404 Not Found response will be sent.
+// If provided password doesn't match, 400 Bad Request response will be sent.
+// If update query failed, 500 Internal Server Error response will be sent.
 func (h *Handler) UpdateUserPartially(w http.ResponseWriter, r *http.Request) {
-	h.Logger.Info("UPDATE USER PARTIALLY")
+	h.logger.Info("UPDATE USER PARTIALLY")
 
-	// params := httprouter.ParamsFromContext(r.Context())
-	// uuid := params.ByName("uuid")
+	params := httprouter.ParamsFromContext(r.Context())
+	uuid := params.ByName("uuid")
 
 	var input UpdateUserDTO
 	if err := h.readJSON(w, r, &input); err != nil {
@@ -134,7 +150,22 @@ func (h *Handler) UpdateUserPartially(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: update the user
+	input.UUID = uuid
+
+	err := h.userService.UpdatePartially(r.Context(), &input)
+	if err != nil {
+		switch err {
+		case apperror.ErrNoRows:
+			h.NotFound(w)
+		case apperror.ErrWrongPassword:
+			h.BadRequest(w, err.Error(), "you entered wrong password")
+		default:
+			h.InternalError(w, err.Error(), "")
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // DeleteUser parses user uuid from URL parameters, then
@@ -144,12 +175,12 @@ func (h *Handler) UpdateUserPartially(w http.ResponseWriter, r *http.Request) {
 // If something went wrong on the server side, 500 Internal Server Error
 // response will be sent.
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	h.Logger.Info("DELETE USER")
+	h.logger.Info("DELETE USER")
 
 	params := httprouter.ParamsFromContext(r.Context())
 	uuid := params.ByName("uuid")
 
-	err := h.UserService.Delete(r.Context(), uuid)
+	err := h.userService.Delete(r.Context(), uuid)
 	if err != nil {
 		if errors.Is(err, apperror.ErrNoRows) {
 			h.NotFound(w)
