@@ -1,0 +1,8 @@
+basePath: /api
+info:
+  contact: {}
+  description: API documentation for Sueta User Service. Navedi sueti, brat.
+  title: SUETA User Service API
+  version: 1.0.0
+paths: {}
+swagger: "2.0"
