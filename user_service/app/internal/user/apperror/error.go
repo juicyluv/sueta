@@ -30,7 +30,7 @@ type AppError struct {
 	Message          string `json:"message,omitempty"`
 	DeveloperMessage string `json:"developerMessage,omitempty"`
 	HttpCode         int    `json:"code,omitempty"`
-}
+} // @name ErrorResponse
 
 // NewAppError returns a new AppError instance.
 func NewAppError(code int, message, developerMessage string) *AppError {
