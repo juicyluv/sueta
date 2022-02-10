@@ -11,7 +11,7 @@ var (
 	ErrNotFound = NewAppError(
 		http.StatusNotFound,
 		"requested resource is not found",
-		"please, double check your request structure",
+		"please, double check your request",
 	)
 
 	// ErrNoRows is used when no rows returned from storage.
@@ -19,6 +19,9 @@ var (
 
 	// ErrEmailTaken is used when the user is being created and given email is already taken.
 	ErrEmailTaken = errors.New("email already taken")
+
+	// ErrWrongPassword is used when user entered wrong password.
+	ErrWrongPassword = errors.New("wrong password")
 )
 
 // AppError describes a structure of an error response in JSON format.
