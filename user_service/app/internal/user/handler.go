@@ -42,9 +42,17 @@ func (h *Handler) Register(router *httprouter.Router) {
 	router.HandlerFunc(http.MethodDelete, userURL, h.DeleteUser)
 }
 
-// GetUser parses uuid from URL parameters, then, using user service,
-// returns a user instance from database with given uuid or an error
-// if there's no user with such uuid or something went wrong.
+// GetUser godoc
+// @Summary Show user information
+// @Description Get user by uuid.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param uuid path string true "User id"
+// @Success 200 {object} User
+// @Failure 404 {object} apperror.AppError
+// @Failure 500 {object} apperror.AppError
+// @Router /users/{uuid} [get]
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("GET USER")
 
@@ -64,9 +72,17 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 	h.JSON(w, http.StatusOK, user)
 }
 
-// GetUser parses request body, then, using user service,
-// returns a user instance from database with given uuid or an error
-// if input is invalid, given email already taken or something went wrong.
+// CreateUser godoc
+// @Summary Create user
+// @Description Register a new user.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param input body user.CreateUserDTO true "JSON input"
+// @Success 201 {object} internal.UserResponse
+// @Failure 400 {object} apperror.AppError
+// @Failure 500 {object} apperror.AppError
+// @Router /users [post]
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("CREATE USER")
 
@@ -88,7 +104,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	userId, err := h.userService.Create(r.Context(), &input)
 	if err != nil {
-		if err := apperror.ErrEmailTaken; err != nil {
+		if errors.Is(err, apperror.ErrEmailTaken) {
 			h.BadRequest(w, err.Error(), "")
 			return
 		}
@@ -99,11 +115,19 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	h.JSON(w, http.StatusCreated, map[string]string{"id": userId})
 }
 
-// GetUserByEmailAndPassword parses email and password from URL query,
-// then validates it and finds a user with this parameters.
-// If validation failed, returns a 400 Bad request response.
-// If user not found, returns a 404 Not Found response.
-// If user found, returns a user information.
+// GetUserByEmailAndPassword godoc
+// @Summary Get user by email and password from query parameters.
+// @Description Create a new user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param email query string true "user email"
+// @Param password query string true "user raw password"
+// @Success 200 {object} User
+// @Failure 400 {object} apperror.AppError
+// @Failure 404 {object} apperror.AppError
+// @Failure 500 {object} apperror.AppError
+// @Router /users [get]
 func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("GET USER BY EMAIL AND PASSWORD")
 
@@ -128,11 +152,19 @@ func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Reque
 	h.JSON(w, http.StatusOK, user)
 }
 
-// UpdateUserPartially parses uuid from URL query, then validated
-// user input and updates the user with provided uuid.
-// If user with provided uuid is not found, 404 Not Found response will be sent.
-// If provided password doesn't match, 400 Bad Request response will be sent.
-// If update query failed, 500 Internal Server Error response will be sent.
+// UpdateUserPartially godoc
+// @Summary Update the user
+// @Description Partially update the user with provided current password.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param uuid path string true "User id"
+// @Param input body user.UpdateUserDTO true "JSON input"
+// @Success 200
+// @Failure 400 {object} apperror.AppError
+// @Failure 404 {object} apperror.AppError
+// @Failure 500 {object} apperror.AppError
+// @Router /users/{uuid} [patch]
 func (h *Handler) UpdateUserPartially(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("UPDATE USER PARTIALLY")
 
@@ -168,12 +200,17 @@ func (h *Handler) UpdateUserPartially(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// DeleteUser parses user uuid from URL parameters, then
-// tries to delete the user with this uuid. If user with provided
-// uuid doesn't exists, 404 Not Found response will be sent to the client.
-// If user has been deleted, 200 OK status will be sent.
-// If something went wrong on the server side, 500 Internal Server Error
-// response will be sent.
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Delete the user by uuid.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param uuid path string true "User id"
+// @Success 200
+// @Failure 404 {object} apperror.AppError
+// @Failure 500 {object} apperror.AppError
+// @Router /users/{uuid} [delete]
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("DELETE USER")
 
