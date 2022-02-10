@@ -37,9 +37,15 @@ func NewService(storage Storage, logger logger.Logger) Service {
 // and try to insert the user. Returns inserted UUID or an error
 // on failure.
 func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, error) {
-	_, err := s.storage.FindByEmail(ctx, input.Email)
-	if err != nil && !errors.Is(err, apperror.ErrNoRows) {
-		return "", err
+	found, err := s.storage.FindByEmail(ctx, input.Email)
+	if err != nil {
+		if !errors.Is(err, apperror.ErrNoRows) {
+			return "", err
+		}
+	}
+
+	if found != nil {
+		return "", apperror.ErrEmailTaken
 	}
 
 	user := &User{
@@ -47,7 +53,7 @@ func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, err
 		Username:     input.Username,
 		Password:     input.Password,
 		Verified:     false,
-		RegisteredAt: time.Now().UTC().String(),
+		RegisteredAt: time.Now().UTC().Format("2006/01/02"),
 	}
 
 	if err := user.HashPassword(); err != nil {
