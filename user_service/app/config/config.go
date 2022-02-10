@@ -19,8 +19,9 @@ type Config struct {
 	} `yaml:"http" env-required:"true"`
 	// DB represents configuration for database.
 	DB struct {
-		URL      string `env:"MONGO_URL" env-required:"true"`
-		Database string `yaml:"database" env-required:"true"`
+		URL        string `env:"MONGO_URL" env-required:"true"`
+		Database   string `yaml:"database" env-required:"true"`
+		Collection string `yaml:"collection" env-required:"true"`
 	} `yaml:"mongo" env-required:"true"`
 	// RedisDSN is DSN for redis connection.
 	RedisDSN string `env:"REDIS_DSN" env-required:"true"`
