@@ -95,7 +95,7 @@ func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
 	result := d.collection.FindOne(ctx, filter)
 	if result.Err() != nil {
 		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-			return nil, apperror.ErrNotFound
+			return nil, apperror.ErrNoRows
 		}
 		d.logger.Error(result.Err())
 		return nil, fmt.Errorf("failed to execute query: %w", err)
@@ -108,10 +108,46 @@ func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
 	return user, nil
 }
 
-// UpdatePartially updates the user with given uuid.
+// UpdatePartially updates the user with new provided values.
 // Returns an error if something went wrong or No Rows error if
 // there's no user with given uuid.
 func (d *db) UpdatePartially(ctx context.Context, user *user.User) error {
+	objectId, err := primitive.ObjectIDFromHex(user.UUID)
+	if err != nil {
+		return fmt.Errorf("failed to convert hex to objectid: %w", err)
+	}
+	filter := bson.M{"_id": objectId}
+
+	userBytes, err := bson.Marshal(&user)
+	if err != nil {
+		return fmt.Errorf("failed to marshal document: %w", err)
+	}
+
+	var updated bson.M
+	err = bson.Unmarshal(userBytes, &updated)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal document: %w", err)
+	}
+
+	delete(updated, "_id")
+
+	query := bson.M{
+		"$set": updated,
+	}
+
+	result, err := d.collection.UpdateOne(ctx, filter, query)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return apperror.ErrNoRows
+		}
+		d.logger.Warn("failed to execute query: %w", err)
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		return apperror.ErrNoRows
+	}
+
 	return nil
 }
 
