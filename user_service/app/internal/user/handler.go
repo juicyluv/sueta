@@ -153,7 +153,7 @@ func (h *Handler) GetUserByEmailAndPassword(w http.ResponseWriter, r *http.Reque
 }
 
 // UpdateUserPartially godoc
-// @Summary Update the user
+// @Summary Update user
 // @Description Partially update the user with provided current password.
 // @Tags users
 // @Accept json
