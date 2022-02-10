@@ -9,6 +9,10 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+type CreateUserResponse struct {
+	UUID string `json:"id"`
+} // @name CreateUserResponse
+
 const (
 	docsPath = "/docs/*any"
 )
