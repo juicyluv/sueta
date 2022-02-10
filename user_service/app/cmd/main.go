@@ -47,7 +47,7 @@ func main() {
 	}
 	logger.Info("connected to database")
 
-	userStorage := db.NewStorage(mongoClient, cfg.DB.Database)
+	userStorage := db.NewStorage(mongoClient, cfg.DB.Collection)
 	userService := user.NewService(userStorage, logger)
 
 	userHandler := user.NewHandler(logger, userService)
