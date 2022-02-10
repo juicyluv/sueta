@@ -1,8 +1,225 @@
 basePath: /api
+definitions:
+  CreateUserInput:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 24
+        minLength: 6
+        type: string
+      repeatPassword:
+        type: string
+      username:
+        maxLength: 20
+        minLength: 3
+        type: string
+    type: object
+  ErrorResponse:
+    properties:
+      code:
+        type: integer
+      developerMessage:
+        type: string
+      message:
+        type: string
+    type: object
+  UpdateUserInput:
+    properties:
+      email:
+        type: string
+      newPassword:
+        maxLength: 24
+        minLength: 6
+        type: string
+      oldPassword:
+        type: string
+      username:
+        maxLength: 20
+        minLength: 3
+        type: string
+    type: object
+  User:
+    properties:
+      email:
+        type: string
+      registeredAt:
+        type: string
+      username:
+        type: string
+      uuid:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  UserResponse:
+    properties:
+      id:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact: {}
   description: API documentation for Sueta User Service. Navedi sueti, brat.
   title: SUETA User Service API
   version: 1.0.0
-paths: {}
+paths:
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Create a new user
+      parameters:
+      - description: user email
+        in: query
+        name: email
+        required: true
+        type: string
+      - description: user raw password
+        in: query
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get user by email and password from query parameters.
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Register a new user.
+      parameters:
+      - description: JSON input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/CreateUserInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Create user
+      tags:
+      - users
+  /users/{uuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete the user by uuid.
+      parameters:
+      - description: User id
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Delete user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Get user by uuid.
+      parameters:
+      - description: User id
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/User'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Show user information
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Partially update the user with provided current password.
+      parameters:
+      - description: User id
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: JSON input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Update the user
+      tags:
+      - users
 swagger: "2.0"
