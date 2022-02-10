@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/juicyluv/sueta/user_service/app/config"
+	"github.com/juicyluv/sueta/user_service/app/internal"
 	"github.com/juicyluv/sueta/user_service/app/internal/server"
 	"github.com/juicyluv/sueta/user_service/app/internal/user"
 	"github.com/juicyluv/sueta/user_service/app/internal/user/db"
@@ -23,6 +24,11 @@ var (
 	configPath = flag.String("config-path", "app/config/config.yml", "path for application configuration file")
 )
 
+// @title SUETA User Service API
+// @version 1.0.0
+// @description API documentation for Sueta User Service. Navedi sueti, brat.
+
+// @BasePath /api
 func main() {
 	flag.Parse()
 	logger.Init()
@@ -53,6 +59,10 @@ func main() {
 	userHandler := user.NewHandler(logger, userService)
 	userHandler.Register(router)
 	logger.Info("initialized user routes")
+
+	logger.Info("initializing swagger documentation")
+	internal.InitSwagger(router)
+	logger.Info("initialized swagger documentation")
 
 	logger.Info("starting the server")
 	srv := server.NewServer(cfg, router, &logger)
