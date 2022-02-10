@@ -9,7 +9,6 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/swaggo/http-swagger v1.2.5
-	github.com/swaggo/http-swagger/example/go-chi v0.0.0-20220206174302-25e73d277c44
 	github.com/swaggo/swag v1.7.9
 	go.mongodb.org/mongo-driver v1.8.3
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
