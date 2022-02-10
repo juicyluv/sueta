@@ -28,7 +28,9 @@ var (
 // @version 1.0.0
 // @description API documentation for Sueta User Service. Navedi sueti, brat.
 
+// @host localhost:8080
 // @BasePath /api
+
 func main() {
 	flag.Parse()
 	logger.Init()
