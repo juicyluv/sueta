@@ -6,3 +6,4 @@ http:
 
 mongo:
   database: sueta
+  collection: users
