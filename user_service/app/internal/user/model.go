@@ -8,12 +8,12 @@ import (
 
 // User represents the user model.
 type User struct {
-	UUID         string `json:"uuid" bson:"_id,omitempty" example:"1"`
-	Email        string `json:"email" bson:"email,omitempty" example:"1"`
-	Username     string `json:"username" bson:"username,omitempty" example:"1"`
-	Password     string `json:"-" bson:"password,omitempty" example:"1"`
-	Verified     bool   `json:"verified" bson:"verified,omitempty" example:"1"`
-	RegisteredAt string `json:"registeredAt" bson:"registeredAt,omitempty" example:"1"`
+	UUID         string `json:"uuid" bson:"_id,omitempty" example:"6205151b67f8792099abb78e"`
+	Email        string `json:"email" bson:"email,omitempty" example:"admin@example.com"`
+	Username     string `json:"username" bson:"username,omitempty" example:"admin"`
+	Password     string `json:"-" bson:"password,omitempty"`
+	Verified     bool   `json:"verified" bson:"verified,omitempty" example:"true"`
+	RegisteredAt string `json:"registeredAt" bson:"registeredAt,omitempty" example:"2022/02/24"`
 } // @name User
 
 // HashPassword will encrypt current user password.
