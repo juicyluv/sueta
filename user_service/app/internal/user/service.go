@@ -32,6 +32,10 @@ func NewService(storage Storage, logger logger.Logger) Service {
 	}
 }
 
+// Create will check whether provided email already taken.
+// If it is, returns an error. Then it will hash user password
+// and try to insert the user. Returns inserted UUID or an error
+// on failure.
 func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, error) {
 	_, err := s.storage.FindByEmail(ctx, input.Email)
 	if err != nil && !errors.Is(err, apperror.ErrNoRows) {
@@ -47,7 +51,7 @@ func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, err
 	}
 
 	if err := user.HashPassword(); err != nil {
-		s.logger.Warn("could not encrypt user password: %w", err)
+		s.logger.Warn("could not encrypt user password: %v", err)
 		return "", err
 	}
 
@@ -59,18 +63,22 @@ func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, err
 	return id, nil
 }
 
+// GetByEmailAndPassword will find a user with provided email.
+// If there's no such user with this email, returns No Rows error.
+// If password doesn't match, returns Wrong Password error.
+// Returns a user if everything is OK.
 func (s *service) GetByEmailAndPassword(ctx context.Context, email, password string) (*User, error) {
 	user, err := s.storage.FindByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, apperror.ErrNoRows) {
 			return nil, err
 		}
-		s.logger.Warn("error occurred on finding user by email: %w", err)
+		s.logger.Warn("error occurred on finding user by email: %v", err)
 		return nil, err
 	}
 
 	if !user.ComparePassword(password) {
-		return nil, errors.New("password doesn't match")
+		return nil, apperror.ErrWrongPassword
 	}
 
 	return user, nil
@@ -83,7 +91,7 @@ func (s *service) GetById(ctx context.Context, uuid string) (*User, error) {
 
 	if err != nil {
 		if errors.Is(err, apperror.ErrNoRows) {
-			return user, err
+			return nil, err
 		}
 		err = fmt.Errorf("failed to find user by uuid: %v", err)
 		s.logger.Warn(err)
@@ -93,10 +101,56 @@ func (s *service) GetById(ctx context.Context, uuid string) (*User, error) {
 	return user, nil
 }
 
+// UpdatePartially will find the user with provided uuid.
+// If there is no user with such id, returns No Rows error.
+// Then passwords will be compared. If it don't match, returns
+// Wrong Password error. Then updates the user. If something went wrong,
+// returns an error and nil if everything is OK.
 func (s *service) UpdatePartially(ctx context.Context, user *UpdateUserDTO) error {
+	u, err := s.GetById(ctx, user.UUID)
+	if err != nil {
+		if !errors.Is(err, apperror.ErrNoRows) {
+			s.logger.Warn("failed to get the user: %v", err)
+		}
+		return err
+	}
+
+	if !u.ComparePassword(*user.OldPassword) {
+		return apperror.ErrWrongPassword
+	}
+
+	if user.NewPassword != nil {
+		u.Password = *user.NewPassword
+		err = u.HashPassword()
+		if err != nil {
+			s.logger.Warn("failed ot hash password: %v", err)
+			return err
+		}
+	}
+
+	if user.Email != nil {
+		u.Email = *user.Email
+	}
+
+	if user.Username != nil {
+		u.Username = *user.Username
+	}
+
+	if err := user.Validate(); err != nil {
+		return err
+	}
+
+	err = s.storage.UpdatePartially(ctx, u)
+	if err != nil {
+		s.logger.Warn("failed to update the user: %v", err)
+		return err
+	}
+
 	return nil
 }
 
+// Delete tries to delete the user with provided uuid.
+// Returns an error on failure or nil if query has been executed.
 func (s *service) Delete(ctx context.Context, uuid string) error {
 	err := s.storage.Delete(ctx, uuid)
 	if err != nil {
