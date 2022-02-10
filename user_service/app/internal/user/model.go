@@ -8,13 +8,13 @@ import (
 
 // User represents the user model.
 type User struct {
-	UUID         string `json:"uuid" bson:"_id,omitempty"`
-	Email        string `json:"email" bson:"email,omitempty"`
-	Username     string `json:"username" bson:"username,omitempty"`
-	Password     string `json:"-" bson:"password,omitempty"`
-	Verified     bool   `json:"verified" bson:"verified,omitempty"`
-	RegisteredAt string `json:"registeredAt" bson:"registeredAt,omitempty"`
-}
+	UUID         string `json:"uuid" bson:"_id,omitempty" example:"1"`
+	Email        string `json:"email" bson:"email,omitempty" example:"1"`
+	Username     string `json:"username" bson:"username,omitempty" example:"1"`
+	Password     string `json:"-" bson:"password,omitempty" example:"1"`
+	Verified     bool   `json:"verified" bson:"verified,omitempty" example:"1"`
+	RegisteredAt string `json:"registeredAt" bson:"registeredAt,omitempty" example:"1"`
+} // @name User
 
 // HashPassword will encrypt current user password.
 // Returns an error on failure.
@@ -37,10 +37,10 @@ func (u *User) ComparePassword(password string) bool {
 // CreateUserDTO is used to create user.
 type CreateUserDTO struct {
 	Email          string `json:"email"`
-	Username       string `json:"username"`
-	Password       string `json:"password"`
+	Username       string `json:"username" minLength:"3" maxLength:"20"`
+	Password       string `json:"password" minLength:"6" maxLength:"24"`
 	RepeatPassword string `json:"repeatPassword"`
-}
+} // @name CreateUserInput
 
 // Validate will validates current struct fields.
 // Returns an error if something doesn't fit rules.
@@ -71,10 +71,10 @@ func (u *CreateUserDTO) Validate() error {
 type UpdateUserDTO struct {
 	UUID        string  `json:"-"`
 	Email       *string `json:"email"`
-	Username    *string `json:"username"`
+	Username    *string `json:"username" minLength:"3" maxLength:"20"`
 	OldPassword *string `json:"oldPassword"`
-	NewPassword *string `json:"newPassword"`
-}
+	NewPassword *string `json:"newPassword" minLength:"6" maxLength:"24"`
+} // @name UpdateUserInput
 
 // Validate will validates current struct fields.
 // Returns an error if something doesn't fit rules.
