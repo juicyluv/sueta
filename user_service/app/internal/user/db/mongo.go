@@ -68,12 +68,12 @@ func (d *db) FindByEmail(ctx context.Context, email string) (*user.User, error) 
 		return nil, err
 	}
 
-	var user user.User
+	var user *user.User
 	if err := result.Decode(&user); err != nil {
 		return nil, fmt.Errorf("failed to decode document: %w", err)
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 // FindById finds the user by given uuid.
