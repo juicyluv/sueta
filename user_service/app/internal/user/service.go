@@ -10,6 +10,8 @@ import (
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
 )
 
+//go:generate mockgen -source=service.go -destination=mocks/service.go
+
 // Service describes user service functionality.
 type Service interface {
 	Create(ctx context.Context, user *CreateUserDTO) (string, error)
@@ -57,7 +59,7 @@ func (s *service) Create(ctx context.Context, input *CreateUserDTO) (string, err
 	}
 
 	if err := user.HashPassword(); err != nil {
-		s.logger.Warn("could not encrypt user password: %v", err)
+		s.logger.Warnf("could not encrypt user password: %v", err)
 		return "", err
 	}
 
@@ -79,7 +81,7 @@ func (s *service) GetByEmailAndPassword(ctx context.Context, email, password str
 		if errors.Is(err, apperror.ErrNoRows) {
 			return nil, err
 		}
-		s.logger.Warn("error occurred on finding user by email: %v", err)
+		s.logger.Warnf("error occurred on finding user by email: %v", err)
 		return nil, err
 	}
 
@@ -116,7 +118,7 @@ func (s *service) UpdatePartially(ctx context.Context, user *UpdateUserDTO) erro
 	u, err := s.GetById(ctx, user.UUID)
 	if err != nil {
 		if !errors.Is(err, apperror.ErrNoRows) {
-			s.logger.Warn("failed to get the user: %v", err)
+			s.logger.Warnf("failed to get the user: %v", err)
 		}
 		return err
 	}
@@ -129,7 +131,7 @@ func (s *service) UpdatePartially(ctx context.Context, user *UpdateUserDTO) erro
 		u.Password = *user.NewPassword
 		err = u.HashPassword()
 		if err != nil {
-			s.logger.Warn("failed ot hash password: %v", err)
+			s.logger.Warnf("failed ot hash password: %v", err)
 			return err
 		}
 	}
@@ -148,7 +150,7 @@ func (s *service) UpdatePartially(ctx context.Context, user *UpdateUserDTO) erro
 
 	err = s.storage.UpdatePartially(ctx, u)
 	if err != nil {
-		s.logger.Warn("failed to update the user: %v", err)
+		s.logger.Warnf("failed to update the user: %v", err)
 		return err
 	}
 
@@ -161,7 +163,7 @@ func (s *service) Delete(ctx context.Context, uuid string) error {
 	err := s.storage.Delete(ctx, uuid)
 	if err != nil {
 		if !errors.Is(err, apperror.ErrNoRows) {
-			s.logger.Warn("failed to delete the user: %v", err)
+			s.logger.Warnf("failed to delete the user: %v", err)
 		}
 	}
 
