@@ -38,7 +38,7 @@ func main() {
 	logger := logger.GetLogger()
 	logger.Info("logger initialized")
 
-	cfg := config.Get(*configPath)
+	cfg := config.Get(*configPath, ".env")
 	logger.Info("loaded config file")
 
 	router := httprouter.New()
