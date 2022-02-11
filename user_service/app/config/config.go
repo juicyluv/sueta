@@ -23,21 +23,18 @@ type Config struct {
 		Database   string `yaml:"database" env-required:"true"`
 		Collection string `yaml:"collection" env-required:"true"`
 	} `yaml:"mongo" env-required:"true"`
-	// RedisDSN is DSN for redis connection.
-	RedisDSN string `env:"REDIS_DSN" env-required:"true"`
 }
 
 var instance *Config
 var once sync.Once
 
 // Get loads .env file and config from given path.
-// Returns config instance if everything is OK
-// or an error if something went wrong.
-func Get(configPath string) *Config {
+// Returns config instance.
+func Get(configPath string, dotenvPath string) *Config {
 	logger := logger.GetLogger()
 
 	logger.Info("loading .env file")
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(dotenvPath); err != nil {
 		logger.Fatalf("could not load .env file: %v", err)
 	}
 	logger.Info("loaded .env file")
