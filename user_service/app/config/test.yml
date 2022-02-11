@@ -1,0 +1,9 @@
+http:
+  port:         3030
+  maxHeaderBytes:  1  # MegaBytes
+  readTimeout:    30  # Seconds
+  writeTimeout:   30  # Seconds
+
+mongo:
+  database: sueta
+  collection: users_test
