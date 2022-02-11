@@ -64,6 +64,12 @@ func (u *CreateUserDTO) Validate() error {
 			validation.Length(6, 24),
 			validation.Required,
 		),
+		validation.Field(
+			&u.RepeatPassword,
+			is.Alphanumeric,
+			validation.Length(6, 24),
+			validation.Required,
+		),
 	)
 }
 
