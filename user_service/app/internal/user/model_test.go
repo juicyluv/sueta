@@ -10,6 +10,8 @@ import (
 )
 
 func TestCreateUserDTO_Validate(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name          string
 		input         *user.CreateUserDTO
@@ -137,6 +139,8 @@ func TestCreateUserDTO_Validate(t *testing.T) {
 }
 
 func TestUser_HashPassword(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name string
 		u    user.User
@@ -145,11 +149,51 @@ func TestUser_HashPassword(t *testing.T) {
 			name: "valid password",
 			u:    user.User{Password: "qwerty"},
 		},
+		{
+			name: "long password",
+			u:    user.User{Password: "asdfasdfasdfa123"},
+		},
+		{
+			name: "empty password",
+			u:    user.User{Password: ""},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			err := tc.u.HashPassword()
+			assert.NoError(t, err)
+		})
+	}
+}
 
+func TestUser_ComparePassword(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name string
+		u    user.User
+	}{
+		{
+			name: "valid password",
+			u:    user.User{Password: "qwerty"},
+		},
+		{
+			name: "long password",
+			u:    user.User{Password: "asdfasdfasdfa123"},
+		},
+		{
+			name: "empty password",
+			u:    user.User{Password: ""},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			password := tc.u.Password
+			err := tc.u.HashPassword()
+			assert.NoError(t, err)
+			assert.True(t, tc.u.ComparePassword(password))
 		})
 	}
 }
