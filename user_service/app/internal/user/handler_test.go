@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -362,6 +363,139 @@ func TestUserHandler_GetUser(t *testing.T) {
 			req = req.WithContext(ctx)
 
 			h.GetUser(rec, req)
+			res := rec.Result()
+
+			assert.Equal(t, res.StatusCode, tc.expectedCode)
+
+			response, err := ioutil.ReadAll(res.Body)
+			assert.NoError(t, err)
+			if tc.expectedErrorResponse != nil {
+				expectedResponse, err := json.Marshal(tc.expectedErrorResponse)
+				assert.NoError(t, err)
+
+				assert.NoError(t, err)
+				assert.EqualValues(t, response, expectedResponse)
+			} else {
+				expectedResponseBytes, err := json.Marshal(&tc.expectedResponse)
+				assert.NoError(t, err)
+				assert.Equal(t, expectedResponseBytes, response)
+			}
+		})
+	}
+}
+
+func TestUserHandler_GetUserByEmailAndPassword(t *testing.T) {
+	handler, teardown := NewTestHandler(t)
+	defer func() {
+		assert.NoError(t, teardown())
+	}()
+	router := httprouter.New()
+	handler.Register(router)
+
+	h, ok := handler.(*user.Handler)
+	if !ok {
+		t.Fatal("cannot convert handler to user.Handler type")
+	}
+
+	u := user.CreateUserDTO{
+		Email:          "test@mail.com",
+		Username:       "test",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	id, err := createUser(h, &u)
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		name                  string
+		expectedCode          int
+		expectedResponse      *user.User
+		expectedErrorResponse *apperror.AppError
+		email                 string
+		password              string
+	}{
+		{
+			name:         "user exists",
+			expectedCode: http.StatusOK,
+			expectedResponse: &user.User{
+				UUID:         id,
+				Email:        u.Email,
+				Username:     u.Username,
+				Verified:     false,
+				RegisteredAt: time.Now().UTC().Format("2006/01/02"),
+			},
+			expectedErrorResponse: nil,
+			email:                 u.Email,
+			password:              u.Password,
+		},
+		{
+			name:             "user not found by email",
+			expectedCode:     http.StatusNotFound,
+			expectedResponse: nil,
+			expectedErrorResponse: apperror.NewAppError(
+				http.StatusNotFound,
+				"requested resource is not found",
+				"please, double check your request",
+			),
+			email:    "test2@mail.com",
+			password: u.Password,
+		},
+		{
+			name:                  "user not found by wrong password",
+			expectedCode:          http.StatusBadRequest,
+			expectedResponse:      nil,
+			expectedErrorResponse: apperror.BadRequestError(apperror.ErrWrongPassword.Error(), ""),
+			email:                 u.Email,
+			password:              "qwerty123",
+		},
+		{
+			name:             "empty email",
+			expectedCode:     http.StatusBadRequest,
+			expectedResponse: nil,
+			expectedErrorResponse: apperror.BadRequestError(
+				"empty email or password",
+				"email and password must be provided",
+			),
+			email:    "",
+			password: u.Password,
+		},
+		{
+			name:             "empty password",
+			expectedCode:     http.StatusBadRequest,
+			expectedResponse: nil,
+			expectedErrorResponse: apperror.BadRequestError(
+				"empty email or password",
+				"email and password must be provided",
+			),
+			email:    u.Email,
+			password: "",
+		},
+		{
+			name:             "empty email and password",
+			expectedCode:     http.StatusBadRequest,
+			expectedResponse: nil,
+			expectedErrorResponse: apperror.BadRequestError(
+				"empty email or password",
+				"email and password must be provided",
+			),
+			email:    "",
+			password: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+
+			req, err := http.NewRequest(
+				http.MethodGet,
+				fmt.Sprintf("%s?email=%s&password=%s", usersURL, tc.email, tc.password),
+				nil,
+			)
+			assert.NoError(t, err)
+
+			h.GetUserByEmailAndPassword(rec, req)
 			res := rec.Result()
 
 			assert.Equal(t, res.StatusCode, tc.expectedCode)
