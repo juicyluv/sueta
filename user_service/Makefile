@@ -1,5 +1,5 @@
 build:
-	go build -o user_ms app/cmd/main.go
+	go build -o bin/user_ms app/cmd/main.go
 
 run:
 	go run app/cmd/main.go
