@@ -228,6 +228,76 @@ func TestUserStorage_FindById(t *testing.T) {
 	}
 }
 
+func TestUserStorage_UpdatePartially(t *testing.T) {
+	storage, teardown := NewTestStorage(t)
+	defer func() { assert.NoError(t, teardown()) }()
+
+	u := user.User{
+		Email:    "test1@mail.com",
+		Username: "test1",
+		Password: "qwerty",
+	}
+
+	u.UUID = createStorageUser(t, storage, &u)
+
+	testCases := []struct {
+		name          string
+		expectedError error
+		beforeTest    func()
+		afterTest     func(t *testing.T)
+	}{
+		{
+			name:          "email update",
+			expectedError: nil,
+			beforeTest: func() {
+				u.Email = "updated@example.com"
+			},
+			afterTest: func(t *testing.T) {
+				found, err := storage.FindByEmail(context.Background(), u.Email)
+				assert.NoError(t, err)
+				assert.Equal(t, found.UUID, u.UUID)
+				assert.Equal(t, found.Email, "updated@example.com")
+			},
+		},
+		{
+			name:          "username update",
+			expectedError: nil,
+			beforeTest: func() {
+				u.Username = "test123"
+			},
+			afterTest: func(t *testing.T) {
+				found, err := storage.FindByEmail(context.Background(), u.Email)
+				assert.NoError(t, err)
+				assert.Equal(t, found.UUID, u.UUID)
+				assert.Equal(t, found.Username, "test123")
+			},
+		},
+		{
+			name:          "password update",
+			expectedError: nil,
+			beforeTest: func() {
+				u.Password = "juicyluv"
+				u.HashPassword()
+			},
+			afterTest: func(t *testing.T) {
+				found, err := storage.FindByEmail(context.Background(), u.Email)
+				assert.NoError(t, err)
+				assert.Equal(t, found.UUID, u.UUID)
+				assert.True(t, u.ComparePassword("juicyluv"))
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.beforeTest()
+			err := storage.UpdatePartially(context.Background(), &u)
+			assert.EqualValues(t, err, tc.expectedError)
+			tc.afterTest(t)
+		})
+	}
+}
+
 func createStorageUser(t *testing.T, storage user.Storage, user *user.User) string {
 	id, err := storage.Create(context.Background(), user)
 	assert.NoError(t, err)
