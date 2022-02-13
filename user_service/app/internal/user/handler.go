@@ -101,7 +101,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if input.Password != input.RepeatPassword {
-		h.BadRequest(w, "password don't match", "provided passwords must to match")
+		h.BadRequest(w, "passwords don't match", "provided passwords must to match")
 		return
 	}
 
