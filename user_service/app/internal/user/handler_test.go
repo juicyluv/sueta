@@ -266,7 +266,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest(http.MethodGet, usersURL, bytes.NewBuffer(body))
+			req, err := http.NewRequest(http.MethodPost, usersURL, bytes.NewBuffer(body))
 			assert.NoError(t, err)
 
 			h.CreateUser(rec, req)
@@ -706,7 +706,7 @@ func TestUserHandler_UpdatePartially(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 
-			req, err := http.NewRequest(http.MethodGet, userURL, bytes.NewBuffer(body))
+			req, err := http.NewRequest(http.MethodPatch, userURL, bytes.NewBuffer(body))
 			assert.NoError(t, err)
 			ctx := req.Context()
 			ctx = context.WithValue(ctx, httprouter.ParamsKey, httprouter.Params{
@@ -732,6 +732,124 @@ func TestUserHandler_UpdatePartially(t *testing.T) {
 	}
 }
 
+func TestUserHandler_Delete(t *testing.T) {
+	handler, teardown := NewTestHandler(t)
+	defer func() {
+		assert.NoError(t, teardown())
+	}()
+	router := httprouter.New()
+	handler.Register(router)
+
+	h, ok := handler.(*user.Handler)
+	if !ok {
+		t.Fatal("cannot convert handler to user.Handler type")
+	}
+
+	u1 := user.CreateUserDTO{
+		Email:          "test@mail.com",
+		Username:       "test",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	id1, err := createUser(h, &u1)
+	assert.NoError(t, err)
+
+	u2 := user.CreateUserDTO{
+		Email:          "test2@mail.com",
+		Username:       "test2",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	id2, err := createUser(h, &u2)
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		name                  string
+		expectedCode          int
+		id                    string
+		expectedErrorResponse *apperror.AppError
+	}{
+		{
+			name:                  "delete user 1",
+			expectedCode:          http.StatusOK,
+			id:                    id1,
+			expectedErrorResponse: nil,
+		},
+		{
+			name:         "delete user 1 again",
+			expectedCode: http.StatusNotFound,
+			id:           id1,
+			expectedErrorResponse: apperror.NewAppError(
+				http.StatusNotFound,
+				"requested resource is not found",
+				"please, double check your request",
+			),
+		},
+		{
+			name:                  "delete user 2",
+			expectedCode:          http.StatusOK,
+			id:                    id2,
+			expectedErrorResponse: nil,
+		},
+		{
+			name:         "delete user 2 again",
+			expectedCode: http.StatusNotFound,
+			id:           id1,
+			expectedErrorResponse: apperror.NewAppError(
+				http.StatusNotFound,
+				"requested resource is not found",
+				"please, double check your request",
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+
+			req, err := http.NewRequest(http.MethodDelete, userURL, nil)
+			assert.NoError(t, err)
+			ctx := req.Context()
+			ctx = context.WithValue(ctx, httprouter.ParamsKey, httprouter.Params{
+				{Key: "uuid", Value: tc.id},
+			})
+			req = req.WithContext(ctx)
+
+			h.DeleteUser(rec, req)
+			res := rec.Result()
+
+			assert.Equal(t, res.StatusCode, tc.expectedCode)
+
+			response, err := ioutil.ReadAll(res.Body)
+			assert.NoError(t, err)
+			if tc.expectedErrorResponse != nil {
+				expectedResponse, err := json.Marshal(tc.expectedErrorResponse)
+				assert.NoError(t, err)
+
+				assert.NoError(t, err)
+				assert.EqualValues(t, response, expectedResponse)
+			} else {
+				rec := httptest.NewRecorder()
+
+				req, err := http.NewRequest(http.MethodDelete, userURL, nil)
+				assert.NoError(t, err)
+				ctx := req.Context()
+				ctx = context.WithValue(ctx, httprouter.ParamsKey, httprouter.Params{
+					{Key: "uuid", Value: tc.id},
+				})
+				req = req.WithContext(ctx)
+
+				h.GetUser(rec, req)
+				res := rec.Result()
+
+				assert.Equal(t, res.StatusCode, http.StatusNotFound)
+			}
+		})
+	}
+}
+
 func createUser(h *user.Handler, u *user.CreateUserDTO) (string, error) {
 
 	body, err := json.Marshal(&u)
@@ -739,7 +857,7 @@ func createUser(h *user.Handler, u *user.CreateUserDTO) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, userURL, bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, usersURL, bytes.NewBuffer(body))
 	if err != nil {
 		return "", err
 	}
