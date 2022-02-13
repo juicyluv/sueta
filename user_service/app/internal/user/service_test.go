@@ -2,49 +2,15 @@ package user_test
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/juicyluv/sueta/user_service/app/config"
 	"github.com/juicyluv/sueta/user_service/app/internal/user"
 	"github.com/juicyluv/sueta/user_service/app/internal/user/apperror"
-	"github.com/juicyluv/sueta/user_service/app/internal/user/db"
 	"github.com/juicyluv/sueta/user_service/app/pkg/logger"
-	"github.com/juicyluv/sueta/user_service/app/pkg/mongo"
 	"github.com/stretchr/testify/assert"
 )
 
-func NewTestStorage(t *testing.T) (user.Storage, func() error) {
-	wd, _ := os.Getwd()
-	for !strings.HasSuffix(wd, "user_service") {
-		wd = filepath.Dir(wd)
-	}
-
-	cfg := config.Get(fmt.Sprintf("%s/app/config/test.yml", wd), fmt.Sprintf("%s/.env", wd))
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	mongoClient, err := mongo.NewMongoClient(ctx, cfg.DB.Database, cfg.DB.URL)
-	if err != nil {
-		t.Fatalf("cannot connect to mongodb: %v", err)
-	}
-
-	userStorage := db.NewStorage(mongoClient, cfg.DB.Collection)
-
-	teardown := func() error {
-		return mongoClient.Collection(cfg.DB.Collection).Drop(context.Background())
-	}
-
-	return userStorage, teardown
-}
-
 func NewTestService(t *testing.T) (user.Service, func() error) {
-	logger.Init()
 	l := logger.GetLogger()
 
 	userStorage, teardown := NewTestStorage(t)
