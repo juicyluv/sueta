@@ -517,6 +517,221 @@ func TestUserHandler_GetUserByEmailAndPassword(t *testing.T) {
 	}
 }
 
+func TestUserHandler_UpdatePartially(t *testing.T) {
+	handler, teardown := NewTestHandler(t)
+	defer func() {
+		assert.NoError(t, teardown())
+	}()
+	router := httprouter.New()
+	handler.Register(router)
+
+	h, ok := handler.(*user.Handler)
+	if !ok {
+		t.Fatal("cannot convert handler to user.Handler type")
+	}
+
+	u := user.CreateUserDTO{
+		Email:          "test@mail.com",
+		Username:       "test",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	id, err := createUser(h, &u)
+	assert.NoError(t, err)
+
+	stringPtr := func(s string) *string {
+		return &s
+	}
+
+	testCases := []struct {
+		name                  string
+		expectedCode          int
+		input                 *user.UpdateUserDTO
+		expectedErrorResponse *apperror.AppError
+	}{
+		{
+			name:         "valid email update",
+			expectedCode: http.StatusOK,
+			input: &user.UpdateUserDTO{
+				Email:       stringPtr("test@mail.com"),
+				OldPassword: &u.Password,
+			},
+			expectedErrorResponse: nil,
+		},
+		{
+			name:         "invalid email update",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				Email:       stringPtr("testmail.com"),
+				OldPassword: &u.Password,
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"email: must be a valid email address.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "valid username update",
+			expectedCode: http.StatusOK,
+			input: &user.UpdateUserDTO{
+				Username:    stringPtr("test2"),
+				OldPassword: &u.Password,
+			},
+			expectedErrorResponse: nil,
+		},
+		{
+			name:         "username less than 3 update",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				Username:    stringPtr("qw"),
+				OldPassword: &u.Password,
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"username: the length must be between 3 and 20.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "username greater than 20 update",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				Username:    stringPtr("qwertyqwertyqwerty123123"),
+				OldPassword: &u.Password,
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"username: the length must be between 3 and 20.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "valid new password update",
+			expectedCode: http.StatusOK,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("qwertyqwerty"),
+				OldPassword: &u.Password,
+			},
+			expectedErrorResponse: nil,
+		},
+		{
+			name:         "new password less than 6 update",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("qwert"),
+				OldPassword: stringPtr("qwertyqwerty"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"newPassword: the length must be between 6 and 24.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "new password greater than 24 update",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("qwertyqwertyqwertyqwerty123123"),
+				OldPassword: stringPtr("qwertyqwerty"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"newPassword: the length must be between 6 and 24.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "invalid old password",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("qwerty"),
+				OldPassword: stringPtr("qwertyqwerty123"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				apperror.ErrWrongPassword.Error(),
+				"you entered wrong password",
+			),
+		},
+		{
+			name:         "old password is not provided",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("qwerty"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"oldPassword: cannot be blank.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "old password is not provided",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("qwerty"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"oldPassword: cannot be blank.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "username is not alphanumeric",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				Username:    stringPtr("antoha_44ru"),
+				OldPassword: stringPtr("qwertyqwerty"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"username: must contain English letters and digits only.",
+				"you have provided invalid values",
+			),
+		},
+		{
+			name:         "new password is not alphanumeric",
+			expectedCode: http.StatusBadRequest,
+			input: &user.UpdateUserDTO{
+				NewPassword: stringPtr("antoha_44ru"),
+				OldPassword: stringPtr("qwertyqwerty"),
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"newPassword: must contain English letters and digits only.",
+				"you have provided invalid values",
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := json.Marshal(tc.input)
+			if err != nil {
+				t.Fatalf("cannot marshal input: %v", err)
+			}
+
+			rec := httptest.NewRecorder()
+
+			req, err := http.NewRequest(http.MethodGet, userURL, bytes.NewBuffer(body))
+			assert.NoError(t, err)
+			ctx := req.Context()
+			ctx = context.WithValue(ctx, httprouter.ParamsKey, httprouter.Params{
+				{Key: "uuid", Value: id},
+			})
+			req = req.WithContext(ctx)
+
+			h.UpdateUserPartially(rec, req)
+			res := rec.Result()
+
+			assert.Equal(t, res.StatusCode, tc.expectedCode)
+
+			response, err := ioutil.ReadAll(res.Body)
+			assert.NoError(t, err)
+			if tc.expectedErrorResponse != nil {
+				expectedResponse, err := json.Marshal(tc.expectedErrorResponse)
+				assert.NoError(t, err)
+
+				assert.NoError(t, err)
+				assert.EqualValues(t, response, expectedResponse)
+			}
+		})
+	}
+}
+
 func createUser(h *user.Handler, u *user.CreateUserDTO) (string, error) {
 
 	body, err := json.Marshal(&u)
