@@ -98,7 +98,7 @@ func (s *service) GetById(ctx context.Context, uuid string) (*User, error) {
 	user, err := s.storage.FindById(ctx, uuid)
 
 	if err != nil {
-		if errors.Is(err, apperror.ErrNoRows) {
+		if errors.Is(err, apperror.ErrNoRows) || errors.Is(err, apperror.ErrInvalidUUID) {
 			return nil, err
 		}
 		err = fmt.Errorf("failed to find user by uuid: %v", err)
