@@ -2,6 +2,7 @@ package user_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -93,6 +94,122 @@ func TestUserService_CreateUser(t *testing.T) {
 
 			id, err := service.Create(context.Background(), tc.input)
 			tc.testBehaviour(id, err)
+		})
+	}
+
+	assert.NoError(t, teardown())
+}
+
+func TestUserService_GetByEmailAndPassword(t *testing.T) {
+	logger.Init()
+	l := logger.GetLogger()
+
+	userStorage, teardown := NewTestStorage(t)
+	service := user.NewService(userStorage, l)
+
+	testCases := []struct {
+		name          string
+		expectedError error
+		email         string
+		password      string
+	}{
+		{
+			name:          "valid input",
+			expectedError: nil,
+			email:         "test@mail.com",
+			password:      "qwerty",
+		},
+		{
+			name:          "invalid email",
+			expectedError: apperror.ErrNoRows,
+			email:         "test2@mail.com",
+			password:      "qwerty",
+		},
+		{
+			name:          "invalid password",
+			expectedError: apperror.ErrWrongPassword,
+			email:         "test@mail.com",
+			password:      "qwerty2",
+		},
+		{
+			name:          "invalid email and password",
+			expectedError: apperror.ErrNoRows,
+			email:         "test2@mail.com",
+			password:      "qwerty2",
+		},
+	}
+
+	created := &user.CreateUserDTO{
+		Email:    "test@mail.com",
+		Username: "test",
+		Password: "qwerty",
+	}
+
+	id1, err := service.Create(context.Background(), created)
+	assert.NoError(t, err)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := service.GetByEmailAndPassword(context.Background(), tc.email, tc.password)
+			assert.EqualValues(t, err, tc.expectedError)
+			if tc.expectedError == nil {
+				assert.Equal(t, id1, u.UUID)
+				assert.Equal(t, created.Email, u.Email)
+				assert.Equal(t, created.Username, u.Username)
+				assert.True(t, u.ComparePassword(created.Password))
+			}
+		})
+	}
+
+	assert.NoError(t, teardown())
+}
+
+func TestUserService_GetById(t *testing.T) {
+	logger.Init()
+	l := logger.GetLogger()
+
+	userStorage, teardown := NewTestStorage(t)
+	service := user.NewService(userStorage, l)
+
+	created := &user.CreateUserDTO{
+		Email:          "test@mail.com",
+		Username:       "test",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	id, err := service.Create(context.Background(), created)
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		name          string
+		uuid          string
+		expectedError error
+	}{
+		{
+			name:          "valid id",
+			uuid:          id,
+			expectedError: nil,
+		},
+		{
+			name:          "no user with given id",
+			uuid:          id[:len(id)-1] + "7",
+			expectedError: apperror.ErrNoRows,
+		},
+		{
+			name:          "invalid uuid",
+			uuid:          "invaliduuid",
+			expectedError: errors.New("failed to find user by uuid: failed to convert hex to objectid: the provided hex string is not a valid ObjectID"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := service.GetById(context.Background(), tc.uuid)
+			assert.EqualValues(t, err, tc.expectedError)
+			if tc.expectedError == nil {
+				assert.Equal(t, u.UUID, id)
+			}
 		})
 	}
 

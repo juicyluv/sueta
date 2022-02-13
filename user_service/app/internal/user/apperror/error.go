@@ -21,7 +21,7 @@ var (
 	ErrEmailTaken = errors.New("email already taken")
 
 	// ErrWrongPassword is used when user entered wrong password.
-	ErrWrongPassword = errors.New("wrong password")
+	ErrWrongPassword = errors.New("wrong email or password")
 )
 
 // AppError describes a structure of an error response in JSON format.
