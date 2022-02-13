@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	userURL = "/api/users/:uuid"
+	userURL  = "/api/users/:uuid"
+	usersURL = "/api/users"
 )
 
 func NewTestHandler(t *testing.T) (handler.Handling, func() error) {
@@ -44,6 +45,251 @@ func TestUserHandler_CreateUser(t *testing.T) {
 	router := httprouter.New()
 	handler.Register(router)
 
+	h, ok := handler.(*user.Handler)
+	if !ok {
+		t.Fatal("cannot convert handler to user.Handler type")
+	}
+
+	type input struct {
+		Email          string `json:"email,omitempty"`
+		Username       string `json:"username,omitempty"`
+		Password       string `json:"password,omitempty"`
+		RepeatPassword string `json:"repeatPassword,omitempty"`
+		ExtraField     string `json:"extra,omitempty"`
+	}
+
+	type createResponse struct {
+		Id string `json:"id"`
+	}
+
+	testCases := []struct {
+		name                  string
+		expectedCode          int
+		input                 input
+		expectedResponse      createResponse
+		expectedErrorResponse *apperror.AppError
+	}{
+		{
+			name:         "valid input",
+			expectedCode: http.StatusCreated,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "test",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: nil,
+		},
+		{
+			name:         "extra field input",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "test",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+				ExtraField:     "something",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"request body contains unknown key \"extra\"",
+				"invalid request body",
+			),
+		},
+		{
+			name:         "empty email",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Username:       "test",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"email: cannot be blank.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "empty email and password",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Username:       "test",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"email: cannot be blank; password: cannot be blank.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "passwords dont match",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "test",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty123",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"passwords don't match",
+				"provided passwords must to match",
+			),
+		},
+		{
+			name:         "invalid email",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "testmail.com",
+				Username:       "test",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"email: must be a valid email address.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "username less than 3",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "te",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"username: the length must be between 3 and 20.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "username greater than 20",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "qwerqwerqwerqwerqwerqwerqwer",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"username: the length must be between 3 and 20.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "username is not alphanumeric",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "antosha_44",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"username: must contain English letters and digits only.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "password is not alphanumeric",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "test",
+				Password:       "aNTOsha_44",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"password: must contain English letters and digits only.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "password length less than 6",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "test",
+				Password:       "qwe",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"password: the length must be between 6 and 24.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "password length greater than 24",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "test",
+				Password:       "qwertyqwertyqwertyqwertywwww",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				"password: the length must be between 6 and 24.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "empty input",
+			expectedCode: http.StatusBadRequest,
+			input:        input{},
+			expectedErrorResponse: apperror.BadRequestError(
+				"email: cannot be blank; password: cannot be blank; repeatPassword: cannot be blank; username: cannot be blank.",
+				"input validation failed. please, provide valid values",
+			),
+		},
+		{
+			name:         "email taken",
+			expectedCode: http.StatusBadRequest,
+			input: input{
+				Email:          "test@mail.com",
+				Username:       "andrew",
+				Password:       "qwerty",
+				RepeatPassword: "qwerty",
+			},
+			expectedErrorResponse: apperror.BadRequestError(
+				apperror.ErrEmailTaken.Error(),
+				"",
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := json.Marshal(&tc.input)
+			if err != nil {
+				t.Fatalf("cannot marshal input: %v", err)
+			}
+
+			rec := httptest.NewRecorder()
+			req, err := http.NewRequest(http.MethodGet, usersURL, bytes.NewBuffer(body))
+			assert.NoError(t, err)
+
+			h.CreateUser(rec, req)
+			res := rec.Result()
+
+			assert.Equal(t, tc.expectedCode, res.StatusCode)
+
+			response, err := ioutil.ReadAll(res.Body)
+			assert.NoError(t, err)
+
+			if tc.expectedErrorResponse != nil {
+				expectedResponse, err := json.Marshal(tc.expectedErrorResponse)
+				assert.NoError(t, err)
+
+				assert.NoError(t, err)
+				assert.EqualValues(t, response, expectedResponse)
+			} else {
+				var createdId createResponse
+				err := json.Unmarshal(response, &createdId)
+				assert.NoError(t, err)
+				assert.NotEmpty(t, createdId.Id)
+			}
+		})
+	}
 }
 
 func TestUserHandler_GetUser(t *testing.T) {
