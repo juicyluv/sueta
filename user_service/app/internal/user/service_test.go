@@ -44,12 +44,17 @@ func NewTestStorage(t *testing.T) (user.Storage, func() error) {
 	return userStorage, teardown
 }
 
-func TestUserService_CreateUser(t *testing.T) {
+func NewTestService(t *testing.T) (user.Service, func() error) {
 	logger.Init()
 	l := logger.GetLogger()
 
 	userStorage, teardown := NewTestStorage(t)
 	service := user.NewService(userStorage, l)
+	return service, teardown
+}
+
+func TestUserService_CreateUser(t *testing.T) {
+	service, teardown := NewTestService(t)
 
 	testCases := []struct {
 		name          string
@@ -101,11 +106,7 @@ func TestUserService_CreateUser(t *testing.T) {
 }
 
 func TestUserService_GetByEmailAndPassword(t *testing.T) {
-	logger.Init()
-	l := logger.GetLogger()
-
-	userStorage, teardown := NewTestStorage(t)
-	service := user.NewService(userStorage, l)
+	service, teardown := NewTestService(t)
 
 	testCases := []struct {
 		name          string
@@ -165,11 +166,7 @@ func TestUserService_GetByEmailAndPassword(t *testing.T) {
 }
 
 func TestUserService_GetById(t *testing.T) {
-	logger.Init()
-	l := logger.GetLogger()
-
-	userStorage, teardown := NewTestStorage(t)
-	service := user.NewService(userStorage, l)
+	service, teardown := NewTestService(t)
 
 	created := &user.CreateUserDTO{
 		Email:          "test@mail.com",
@@ -217,11 +214,7 @@ func TestUserService_GetById(t *testing.T) {
 }
 
 func TestUserService_UpdatePartially(t *testing.T) {
-	logger.Init()
-	l := logger.GetLogger()
-
-	userStorage, teardown := NewTestStorage(t)
-	service := user.NewService(userStorage, l)
+	service, teardown := NewTestService(t)
 
 	created := &user.CreateUserDTO{
 		Email:          "test@mail.com",
@@ -305,11 +298,7 @@ func TestUserService_UpdatePartially(t *testing.T) {
 }
 
 func TestUserService_Delete(t *testing.T) {
-	logger.Init()
-	l := logger.GetLogger()
-
-	userStorage, teardown := NewTestStorage(t)
-	service := user.NewService(userStorage, l)
+	service, teardown := NewTestService(t)
 
 	created1 := &user.CreateUserDTO{
 		Email:          "test@mail.com",
