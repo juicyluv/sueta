@@ -2,7 +2,6 @@ package user_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -196,7 +195,7 @@ func TestUserService_GetById(t *testing.T) {
 		{
 			name:          "invalid uuid",
 			uuid:          "invaliduuid",
-			expectedError: errors.New("failed to find user by uuid: failed to convert hex to objectid: the provided hex string is not a valid ObjectID"),
+			expectedError: apperror.ErrInvalidUUID,
 		},
 	}
 
