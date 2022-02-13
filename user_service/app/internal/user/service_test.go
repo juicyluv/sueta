@@ -215,3 +215,73 @@ func TestUserService_GetById(t *testing.T) {
 
 	assert.NoError(t, teardown())
 }
+
+func TestUserService_UpdatePartially(t *testing.T) {
+	logger.Init()
+	l := logger.GetLogger()
+
+	userStorage, teardown := NewTestStorage(t)
+	service := user.NewService(userStorage, l)
+
+	created := &user.CreateUserDTO{
+		Email:          "test@mail.com",
+		Username:       "test",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	stringPtr := func(s string) *string {
+		return &s
+	}
+
+	id, err := service.Create(context.Background(), created)
+	assert.NoError(t, err)
+
+	testCases := []struct {
+		name          string
+		input         *user.UpdateUserDTO
+		expectedError error
+	}{
+		{
+			name: "update email",
+			input: &user.UpdateUserDTO{
+				UUID:        id,
+				Email:       stringPtr("newemail@gmail.com"),
+				OldPassword: stringPtr("qwerty"),
+			},
+			expectedError: nil,
+		},
+		{
+			name: "update username",
+			input: &user.UpdateUserDTO{
+				UUID:        id,
+				Username:    stringPtr("newusername"),
+				OldPassword: stringPtr("qwerty"),
+			},
+			expectedError: nil,
+		},
+		{
+			name: "update password",
+			input: &user.UpdateUserDTO{
+				UUID:        id,
+				NewPassword: stringPtr("qwerty123123"),
+				OldPassword: stringPtr("qwerty"),
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.EqualValues(t, tc.expectedError, service.UpdatePartially(context.Background(), tc.input))
+		})
+	}
+
+	u, err := service.GetById(context.Background(), id)
+	assert.NoError(t, err)
+	assert.Equal(t, u.Email, "newemail@gmail.com")
+	assert.Equal(t, u.Username, "newusername")
+	assert.True(t, u.ComparePassword("qwerty123123"))
+
+	assert.NoError(t, teardown())
+}
