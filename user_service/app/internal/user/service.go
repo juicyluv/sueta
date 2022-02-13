@@ -165,6 +165,7 @@ func (s *service) Delete(ctx context.Context, uuid string) error {
 		if !errors.Is(err, apperror.ErrNoRows) {
 			s.logger.Warnf("failed to delete the user: %v", err)
 		}
+		return err
 	}
 
 	return nil
