@@ -61,11 +61,14 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.GetById(r.Context(), uuid)
 	if err != nil {
-		if errors.Is(err, apperror.ErrNoRows) {
+		switch {
+		case errors.Is(err, apperror.ErrNoRows):
 			h.NotFound(w)
-			return
+		case errors.Is(err, apperror.ErrInvalidUUID):
+			h.BadRequest(w, err.Error(), "")
+		default:
+			h.InternalError(w, err.Error(), "")
 		}
-		h.InternalError(w, err.Error(), "")
 		return
 	}
 
