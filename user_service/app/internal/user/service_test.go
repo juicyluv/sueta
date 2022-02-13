@@ -285,3 +285,60 @@ func TestUserService_UpdatePartially(t *testing.T) {
 
 	assert.NoError(t, teardown())
 }
+
+func TestUserService_Delete(t *testing.T) {
+	logger.Init()
+	l := logger.GetLogger()
+
+	userStorage, teardown := NewTestStorage(t)
+	service := user.NewService(userStorage, l)
+
+	created1 := &user.CreateUserDTO{
+		Email:          "test@mail.com",
+		Username:       "test",
+		Password:       "qwerty",
+		RepeatPassword: "qwerty",
+	}
+
+	created2 := &user.CreateUserDTO{
+		Email:          "test2@mail.com",
+		Username:       "test2",
+		Password:       "qwerty123123",
+		RepeatPassword: "qwerty123123",
+	}
+
+	id1, err := service.Create(context.Background(), created1)
+	assert.NoError(t, err)
+	id2, err := service.Create(context.Background(), created2)
+	assert.NoError(t, err)
+
+	u1, err := service.GetById(context.Background(), id1)
+	assert.NoError(t, err)
+	assert.NotNil(t, u1)
+
+	u2, err := service.GetById(context.Background(), id2)
+	assert.NoError(t, err)
+	assert.NotNil(t, u2)
+
+	err = service.Delete(context.Background(), u1.UUID)
+	assert.NoError(t, err)
+
+	deleted1, err := service.GetById(context.Background(), u1.UUID)
+	assert.Error(t, err)
+	assert.EqualValues(t, err, apperror.ErrNoRows)
+	assert.Nil(t, deleted1)
+
+	notDeleted, err := service.GetById(context.Background(), u2.UUID)
+	assert.NoError(t, err)
+	assert.NotNil(t, notDeleted)
+
+	err = service.Delete(context.Background(), u2.UUID)
+	assert.NoError(t, err)
+
+	deleted2, err := service.GetById(context.Background(), u2.UUID)
+	assert.Error(t, err)
+	assert.EqualValues(t, err, apperror.ErrNoRows)
+	assert.Nil(t, deleted2)
+
+	assert.NoError(t, teardown())
+}
