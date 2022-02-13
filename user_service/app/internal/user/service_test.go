@@ -269,6 +269,24 @@ func TestUserService_UpdatePartially(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "invalid uuid",
+			input: &user.UpdateUserDTO{
+				UUID:        "6205151b67f8792099abb78e",
+				NewPassword: stringPtr("qwerty123123"),
+				OldPassword: stringPtr("qwerty"),
+			},
+			expectedError: apperror.ErrNoRows,
+		},
+		{
+			name: "wrong password",
+			input: &user.UpdateUserDTO{
+				UUID:        id,
+				NewPassword: stringPtr("qwerty123123"),
+				OldPassword: stringPtr("qwerty"),
+			},
+			expectedError: apperror.ErrWrongPassword,
+		},
 	}
 
 	for _, tc := range testCases {
