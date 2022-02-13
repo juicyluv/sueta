@@ -84,7 +84,7 @@ func (d *db) FindById(ctx context.Context, uuid string) (*user.User, error) {
 
 	objectID, err := primitive.ObjectIDFromHex(uuid)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert hex to objectid: %w", err)
+		return nil, apperror.ErrInvalidUUID
 	}
 
 	filter := bson.M{"_id": objectID}
