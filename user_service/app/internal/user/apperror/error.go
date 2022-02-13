@@ -22,6 +22,9 @@ var (
 
 	// ErrWrongPassword is used when user entered wrong password.
 	ErrWrongPassword = errors.New("wrong email or password")
+
+	// ErrInvalidUUID is used when invalid uuid provided.
+	ErrInvalidUUID = errors.New("invalid uuid")
 )
 
 // AppError describes a structure of an error response in JSON format.
