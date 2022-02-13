@@ -298,6 +298,38 @@ func TestUserStorage_UpdatePartially(t *testing.T) {
 	}
 }
 
+func TestUserStorage_Delete(t *testing.T) {
+	storage, teardown := NewTestStorage(t)
+	defer func() { assert.NoError(t, teardown()) }()
+
+	users := []user.User{
+		{
+			Email:    "test1@mail.com",
+			Username: "test1",
+			Password: "qwerty",
+		},
+		{
+			Email:    "test2@mail.com",
+			Username: "test2",
+			Password: "qwerty123",
+		},
+	}
+
+	for i := range users {
+		id := createStorageUser(t, storage, &users[i])
+		users[i].UUID = id
+	}
+
+	for _, u := range users {
+		err := storage.Delete(context.Background(), u.UUID)
+		assert.NoError(t, err)
+		found, err := storage.FindById(context.Background(), u.UUID)
+		assert.Error(t, err)
+		assert.EqualValues(t, err, apperror.ErrNoRows)
+		assert.Nil(t, found)
+	}
+}
+
 func createStorageUser(t *testing.T, storage user.Storage, user *user.User) string {
 	id, err := storage.Create(context.Background(), user)
 	assert.NoError(t, err)
