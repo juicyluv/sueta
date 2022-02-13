@@ -82,7 +82,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param input body user.CreateUserDTO true "JSON input"
-// @Success 201 {object} internal.UserResponse
+// @Success 201 {object} internal.CreateUserResponse
 // @Failure 400 {object} apperror.AppError
 // @Failure 500 {object} apperror.AppError
 // @Router /users [post]
@@ -119,7 +119,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetUserByEmailAndPassword godoc
-// @Summary Get user by email and password from query parameters.
+// @Summary Get user by email and password from query parameters
 // @Description Create a new user
 // @Tags users
 // @Accept json
