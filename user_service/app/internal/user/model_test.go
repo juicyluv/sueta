@@ -138,6 +138,114 @@ func TestCreateUserDTO_Validate(t *testing.T) {
 	}
 }
 
+func TestUpdateUserDTO_Validate(t *testing.T) {
+	t.Parallel()
+
+	type in struct {
+		Email       string
+		Username    string
+		OldPassword string
+		NewPassword string
+	}
+
+	testCases := []struct {
+		name          string
+		input         in
+		expectedError *validation.Errors
+	}{
+		{
+			name: "valid input",
+			input: in{
+				Email:       "test@mail.com",
+				Username:    "test",
+				OldPassword: "qwerty",
+				NewPassword: "qwerty123",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "invalid email",
+			input: in{
+				Email:       "testmail.com",
+				Username:    "test",
+				OldPassword: "qwerty",
+				NewPassword: "qwerty123",
+			},
+			expectedError: &validation.Errors{"email": errors.New("must be a valid email address")},
+		},
+		{
+			name: "invalid username",
+			input: in{
+				Email:       "test@mail.com",
+				Username:    "qwer_ty",
+				OldPassword: "qwerty",
+				NewPassword: "qwerty123",
+			},
+			expectedError: &validation.Errors{"username": errors.New("must contain English letters and digits only")},
+		},
+		{
+			name: "new password less than 6",
+			input: in{
+				Email:       "test@mail.com",
+				Username:    "test",
+				OldPassword: "qwerty",
+				NewPassword: "qwe",
+			},
+			expectedError: &validation.Errors{"newPassword": errors.New("the length must be between 6 and 24")},
+		},
+		{
+			name: "new password greater than 24",
+			input: in{
+				Email:       "test@mail.com",
+				Username:    "test",
+				OldPassword: "qwerty",
+				NewPassword: "qwertyqwertyqwertyqwertywwww",
+			},
+			expectedError: &validation.Errors{"newPassword": errors.New("the length must be between 6 and 24")},
+		},
+		{
+			name: "empty string input",
+			input: in{
+				Email:       "",
+				Username:    "",
+				OldPassword: "",
+				NewPassword: "",
+			},
+			expectedError: &validation.Errors{"oldPassword": errors.New("cannot be blank")},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			update := &user.UpdateUserDTO{
+				Email:       &tc.input.Email,
+				Username:    &tc.input.Username,
+				OldPassword: &tc.input.OldPassword,
+				NewPassword: &tc.input.NewPassword,
+			}
+
+			err := update.Validate()
+			if tc.expectedError != nil {
+				assert.EqualValues(t, err, *tc.expectedError)
+			}
+		})
+	}
+
+	t.Run("empty nil string", func(t *testing.T) {
+		update := &user.UpdateUserDTO{
+			Email:       nil,
+			Username:    nil,
+			OldPassword: nil,
+			NewPassword: nil,
+		}
+
+		expectedError := validation.Errors{"oldPassword": errors.New("cannot be blank")}
+
+		err := update.Validate()
+		assert.EqualValues(t, err, expectedError)
+	})
+}
+
 func TestUser_HashPassword(t *testing.T) {
 	t.Parallel()
 
