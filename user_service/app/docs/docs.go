@@ -28,7 +28,7 @@ const docTemplate_swagger = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Get user by email and password from query parameters.",
+                "summary": "Get user by email and password from query parameters",
                 "parameters": [
                     {
                         "type": "string",
@@ -99,7 +99,7 @@ const docTemplate_swagger = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/UserResponse"
+                            "$ref": "#/definitions/CreateUserResponse"
                         }
                     },
                     "400": {
@@ -210,7 +210,7 @@ const docTemplate_swagger = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Update the user",
+                "summary": "Update user",
                 "parameters": [
                     {
                         "type": "string",
@@ -263,17 +263,21 @@ const docTemplate_swagger = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string",
-                    "maxLength": 24,
-                    "minLength": 6
+                    "type": "string"
                 },
                 "repeatPassword": {
                     "type": "string"
                 },
                 "username": {
-                    "type": "string",
-                    "maxLength": 20,
-                    "minLength": 3
+                    "type": "string"
+                }
+            }
+        },
+        "CreateUserResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
                 }
             }
         },
@@ -298,17 +302,13 @@ const docTemplate_swagger = `{
                     "type": "string"
                 },
                 "newPassword": {
-                    "type": "string",
-                    "maxLength": 24,
-                    "minLength": 6
+                    "type": "string"
                 },
                 "oldPassword": {
                     "type": "string"
                 },
                 "username": {
-                    "type": "string",
-                    "maxLength": 20,
-                    "minLength": 3
+                    "type": "string"
                 }
             }
         },
@@ -316,27 +316,24 @@ const docTemplate_swagger = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "admin@example.com"
                 },
                 "registeredAt": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2022/02/24"
                 },
                 "username": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "admin"
                 },
                 "uuid": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "6205151b67f8792099abb78e"
                 },
                 "verified": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "UserResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
+                    "type": "boolean",
+                    "example": true
                 }
             }
         }

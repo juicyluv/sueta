@@ -5,14 +5,15 @@ definitions:
       email:
         type: string
       password:
-        maxLength: 24
-        minLength: 6
         type: string
       repeatPassword:
         type: string
       username:
-        maxLength: 20
-        minLength: 3
+        type: string
+    type: object
+  CreateUserResponse:
+    properties:
+      id:
         type: string
     type: object
   ErrorResponse:
@@ -29,33 +30,29 @@ definitions:
       email:
         type: string
       newPassword:
-        maxLength: 24
-        minLength: 6
         type: string
       oldPassword:
         type: string
       username:
-        maxLength: 20
-        minLength: 3
         type: string
     type: object
   User:
     properties:
       email:
+        example: admin@example.com
         type: string
       registeredAt:
+        example: 2022/02/24
         type: string
       username:
+        example: admin
         type: string
       uuid:
+        example: 6205151b67f8792099abb78e
         type: string
       verified:
+        example: true
         type: boolean
-    type: object
-  UserResponse:
-    properties:
-      id:
-        type: string
     type: object
 host: localhost:8080
 info:
@@ -99,7 +96,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: Get user by email and password from query parameters.
+      summary: Get user by email and password from query parameters
       tags:
       - users
     post:
@@ -119,7 +116,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/UserResponse'
+            $ref: '#/definitions/CreateUserResponse'
         "400":
           description: Bad Request
           schema:
@@ -219,7 +216,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-      summary: Update the user
+      summary: Update user
       tags:
       - users
 swagger: "2.0"
