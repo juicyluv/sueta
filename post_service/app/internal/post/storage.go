@@ -2,7 +2,7 @@ package post
 
 import "context"
 
-// Storage descibes a user storage functionality.
+// Storage descibes a post storage functionality.
 type Storage interface {
 	Create(ctx context.Context, post *Post) (string, error)
 	FindById(ctx context.Context, uuid string) (*Post, error)
