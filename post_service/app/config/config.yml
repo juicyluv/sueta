@@ -1,0 +1,5 @@
+http:
+  port:         8080
+  maxHeaderBytes:  1  # MegaBytes
+  readTimeout:    30  # Seconds
+  writeTimeout:   30  # Seconds
