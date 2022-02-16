@@ -17,14 +17,8 @@ var (
 	// ErrNoRows is used when no rows returned from storage.
 	ErrNoRows = errors.New("no rows")
 
-	// ErrEmailTaken is used when the user is being created and given email is already taken.
-	ErrEmailTaken = errors.New("email already taken")
-
-	// ErrWrongPassword is used when user entered wrong password.
-	ErrWrongPassword = errors.New("wrong email or password")
-
-	// ErrInvalidUUID is used when invalid uuid provided.
-	ErrInvalidUUID = errors.New("invalid uuid")
+	// ErrValidationFailed is used when input validation failed.
+	ErrValidationFailed = errors.New("input validation failed. please, provide valid values")
 )
 
 // AppError describes a structure of an error response in JSON format.
