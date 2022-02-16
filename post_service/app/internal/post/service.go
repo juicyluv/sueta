@@ -58,7 +58,7 @@ func (s *service) GetById(ctx context.Context, uuid string) (*Post, error) {
 	post, err := s.storage.FindById(ctx, uuid)
 
 	if err != nil {
-		if errors.Is(err, apperror.ErrNoRows) || errors.Is(err, apperror.ErrInvalidUUID) {
+		if errors.Is(err, apperror.ErrNoRows) {
 			return nil, err
 		}
 		err = fmt.Errorf("failed to find post by uuid: %v", err)
