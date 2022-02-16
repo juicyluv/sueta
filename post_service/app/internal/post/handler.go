@@ -39,158 +39,145 @@ func (h *Handler) Register(router *httprouter.Router) {
 	router.HandlerFunc(http.MethodDelete, postURL, h.DeletePost)
 }
 
-// GetUser godoc
-// @Summary Show user information
-// @Description Get user by uuid.
-// @Tags users
+// GetPost godoc
+// @Summary Show post information
+// @Description Get post by uuid.
+// @Tags posts
 // @Accept json
 // @Produce json
-// @Param uuid path string true "User id"
-// @Success 200 {object} User
+// @Param uuid path string true "Post id"
+// @Success 200 {object} Post
 // @Failure 404 {object} apperror.AppError
 // @Failure 500 {object} apperror.AppError
-// @Router /users/{uuid} [get]
+// @Router /posts/{uuid} [get]
 func (h *Handler) GetPost(w http.ResponseWriter, r *http.Request) {
-	// h.logger.Info("GET USER")
+	h.logger.Info("GET POST")
 
-	// params := httprouter.ParamsFromContext(r.Context())
-	// uuid := params.ByName("uuid")
+	params := httprouter.ParamsFromContext(r.Context())
+	uuid := params.ByName("uuid")
 
-	// user, err := h.userService.GetById(r.Context(), uuid)
-	// if err != nil {
-	// 	switch {
-	// 	case errors.Is(err, apperror.ErrNoRows):
-	// 		h.NotFound(w)
-	// 	case errors.Is(err, apperror.ErrInvalidUUID):
-	// 		h.BadRequest(w, err.Error(), "")
-	// 	default:
-	// 		h.InternalError(w, err.Error(), "")
-	// 	}
-	// 	return
-	// }
+	post, err := h.postService.GetById(r.Context(), uuid)
+	if err != nil {
+		switch {
+		case errors.Is(err, apperror.ErrNoRows):
+			h.NotFound(w)
+		default:
+			h.InternalError(w, err.Error(), "")
+		}
+		return
+	}
 
-	// h.JSON(w, http.StatusOK, user)
+	h.JSON(w, http.StatusOK, post)
 }
 
-// CreateUser godoc
-// @Summary Create user
-// @Description Register a new user.
-// @Tags users
+// CreatePost godoc
+// @Summary Create post
+// @Description Register a new post.
+// @Tags posts
 // @Accept json
 // @Produce json
-// @Param input body user.CreateUserDTO true "JSON input"
-// @Success 201 {object} internal.CreateUserResponse
+// @Param input body post.CreatepostDTO true "JSON input"
+// @Success 201 {object} internal.CreatePostResponse
 // @Failure 400 {object} apperror.AppError
 // @Failure 500 {object} apperror.AppError
-// @Router /users [post]
+// @Router /posts [post]
 func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("CREATE USER")
+	h.logger.Info("CREATE POST")
 
-	// var input CreateUserDTO
-	// if err := h.readJSON(w, r, &input); err != nil {
-	// 	h.BadRequest(w, err.Error(), "invalid request body")
-	// 	return
-	// }
+	var input CreatePostDTO
+	if err := h.readJSON(w, r, &input); err != nil {
+		h.BadRequest(w, err.Error(), "invalid request body")
+		return
+	}
 
-	// if err := input.Validate(); err != nil {
-	// 	h.BadRequest(w, err.Error(), "input validation failed. please, provide valid values")
-	// 	return
-	// }
+	if err := input.Validate(); err != nil {
+		h.BadRequest(w, err.Error(), apperror.ErrValidationFailed.Error())
+		return
+	}
 
-	// if input.Password != input.RepeatPassword {
-	// 	h.BadRequest(w, "passwords don't match", "provided passwords must to match")
-	// 	return
-	// }
+	postId, err := h.postService.Create(r.Context(), &input)
+	if err != nil {
+		h.InternalError(w, fmt.Sprintf("cannot create post: %v", err), "")
+		return
+	}
 
-	// userId, err := h.userService.Create(r.Context(), &input)
-	// if err != nil {
-	// 	if errors.Is(err, apperror.ErrEmailTaken) {
-	// 		h.BadRequest(w, err.Error(), "")
-	// 		return
-	// 	}
-	// 	h.InternalError(w, fmt.Sprintf("cannot create user: %v", err), "")
-	// 	return
-	// }
-
-	// h.JSON(w, http.StatusCreated, map[string]string{"id": userId})
+	h.JSON(w, http.StatusCreated, map[string]string{"id": postId})
 }
 
-// UpdateUserPartially godoc
-// @Summary Update user
-// @Description Partially update the user with provided current password.
-// @Tags users
+// UpdatePostPartially godoc
+// @Summary Update post
+// @Description Partially update the post with provided current password.
+// @Tags posts
 // @Accept json
 // @Produce json
-// @Param uuid path string true "User id"
-// @Param input body user.UpdateUserDTO true "JSON input"
+// @Param uuid path string true "Post id"
+// @Param input body post.UpdatePostDTO true "JSON input"
 // @Success 200
 // @Failure 400 {object} apperror.AppError
 // @Failure 404 {object} apperror.AppError
 // @Failure 500 {object} apperror.AppError
-// @Router /users/{uuid} [patch]
+// @Router /posts/{uuid} [patch]
 func (h *Handler) UpdatePostPartially(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("UPDATE USER PARTIALLY")
+	h.logger.Info("UPDATE POST PARTIALLY")
 
-	// params := httprouter.ParamsFromContext(r.Context())
-	// uuid := params.ByName("uuid")
+	params := httprouter.ParamsFromContext(r.Context())
+	uuid := params.ByName("uuid")
 
-	// var input UpdatePostDTO
-	// if err := h.readJSON(w, r, &input); err != nil {
-	// 	h.BadRequest(w, err.Error(), "please, fix your request body")
-	// 	return
-	// }
+	var input UpdatePostDTO
+	if err := h.readJSON(w, r, &input); err != nil {
+		h.BadRequest(w, err.Error(), "please, fix your request body")
+		return
+	}
 
-	// if err := input.Validate(); err != nil {
-	// 	h.BadRequest(w, err.Error(), "you have provided invalid values")
-	// 	return
-	// }
+	if err := input.Validate(); err != nil {
+		h.BadRequest(w, err.Error(), apperror.ErrValidationFailed.Error())
+		return
+	}
 
-	// input.UUID = uuid
+	input.UUID = uuid
 
-	// err := h.userService.UpdatePartially(r.Context(), &input)
-	// if err != nil {
-	// 	switch err {
-	// 	case apperror.ErrNoRows:
-	// 		h.NotFound(w)
-	// 	case apperror.ErrWrongPassword:
-	// 		h.BadRequest(w, err.Error(), "you entered wrong password")
-	// 	default:
-	// 		h.InternalError(w, err.Error(), "")
-	// 	}
-	// 	return
-	// }
+	err := h.postService.UpdatePartially(r.Context(), &input)
+	if err != nil {
+		switch err {
+		case apperror.ErrNoRows:
+			h.NotFound(w)
+		default:
+			h.InternalError(w, err.Error(), "")
+		}
+		return
+	}
 
-	// w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusOK)
 }
 
-// DeleteUser godoc
-// @Summary Delete user
-// @Description Delete the user by uuid.
-// @Tags users
+// DeletePost godoc
+// @Summary Delete post
+// @Description Delete the post by uuid.
+// @Tags posts
 // @Accept json
 // @Produce json
-// @Param uuid path string true "User id"
+// @Param uuid path string true "Post id"
 // @Success 200
 // @Failure 404 {object} apperror.AppError
 // @Failure 500 {object} apperror.AppError
-// @Router /users/{uuid} [delete]
+// @Router /posts/{uuid} [delete]
 func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	// h.logger.Info("DELETE USER")
+	h.logger.Info("DELETE POST")
 
-	// params := httprouter.ParamsFromContext(r.Context())
-	// uuid := params.ByName("uuid")
+	params := httprouter.ParamsFromContext(r.Context())
+	uuid := params.ByName("uuid")
 
-	// err := h.userService.Delete(r.Context(), uuid)
-	// if err != nil {
-	// 	if errors.Is(err, apperror.ErrNoRows) {
-	// 		h.NotFound(w)
-	// 		return
-	// 	}
-	// 	h.InternalError(w, err.Error(), "something went wrong on the server side")
-	// 	return
-	// }
+	err := h.postService.Delete(r.Context(), uuid)
+	if err != nil {
+		if errors.Is(err, apperror.ErrNoRows) {
+			h.NotFound(w)
+			return
+		}
+		h.InternalError(w, err.Error(), "something went wrong on the server side")
+		return
+	}
 
-	// w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusOK)
 }
 
 // JSON encodes to JSON format given data and sends a response
